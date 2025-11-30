@@ -7,7 +7,7 @@ import 'package:yuva_ride/utils/app_fonts.dart';
 import 'package:yuva_ride/view/screens/auth/login_screen.dart';
 import 'package:yuva_ride/view/screens/home/navbar/screens/help_screen.dart';
 import 'package:yuva_ride/view/screens/home/navbar/screens/language_screen.dart';
-import 'package:yuva_ride/view/screens/home/navbar/screens/my_ride/my_ride_screen.dart';
+import 'package:yuva_ride/view/screens/home/navbar/my_ride_screen.dart';
 import 'package:yuva_ride/view/screens/home/navbar/screens/notification_screen.dart';
 import 'package:yuva_ride/view/screens/home/navbar/screens/profile_screen.dart';
 import 'package:yuva_ride/view/screens/home/navbar/screens/rafer_and_earn_screen.dart';

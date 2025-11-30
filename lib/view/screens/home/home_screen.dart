@@ -12,7 +12,9 @@ import 'package:yuva_ride/utils/app_colors.dart';
 import 'package:yuva_ride/view/screens/home/navbar/navbar_screen.dart';
 import 'dart:ui' as ui;
 
-import 'package:yuva_ride/view/screens/home/selection_location_screen.dart';
+import 'package:yuva_ride/view/screens/ride_booking/book_ride/selection_location_book_screen.dart';
+import 'package:yuva_ride/view/screens/ride_sharing/ride_sharing_history/ride_sharing_history_screen.dart';
+import 'package:yuva_ride/view/screens/ride_sharing/share_ride/selection_location_share_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -99,7 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Row(
                       children: [
                         _circleButton(Icons.menu, () {
-                          _scaffoldKey.currentState?.openDrawer(); 
+                          _scaffoldKey.currentState?.openDrawer();
                         }),
                         const SizedBox(width: 10),
                         Expanded(
@@ -108,7 +110,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               Navigator.push(
                                 context,
                                 AppAnimations.slideTopToBottom(
-                                  const SelectLocationScreen(),
+                                  const SelectLocationBookScreen(),
                                 ),
                               );
                             },
@@ -185,7 +187,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           Navigator.push(
                             context,
                             AppAnimations.slideTopToBottom(
-                              const SelectLocationScreen(),
+                              const SelectLocationBookScreen(),
                             ),
                           );
                         },
@@ -195,6 +197,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         title: "Ride Sharing",
                         subtitle: "Connect and ride together",
                         imagePath: "assets/images/ride_sharing.png",
+                        ontap: () {
+                          Navigator.push(
+                            context,
+                            AppAnimations.slideTopToBottom(
+                              const SelectLocationShareScreen(),
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -232,7 +242,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Navigator.push(
                         context,
                         AppAnimations.slideBottomToTop(
-                          const SelectLocationScreen(),
+                          const SelectLocationBookScreen(),
                         ),
                       );
                     },

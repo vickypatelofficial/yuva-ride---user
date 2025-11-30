@@ -1,11 +1,11 @@
-
 import 'package:flutter/material.dart';
 import 'package:yuva_ride/view/custom_widgets/cusotm_back.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_scaffold_utils.dart';
 import 'package:yuva_ride/utils/animations.dart';
 import 'package:yuva_ride/utils/app_fonts.dart';
 import 'package:yuva_ride/utils/app_colors.dart';
-import 'package:yuva_ride/view/screens/home/navbar/screens/my_ride/ride_booking_screen.dart';
+import 'package:yuva_ride/view/screens/ride_booking/ride_booking_history/ride_booking_history_screen.dart';
+import 'package:yuva_ride/view/screens/ride_sharing/ride_sharing_history/ride_sharing_history_screen.dart';
 
 class MyRidesScreen extends StatelessWidget {
   const MyRidesScreen({super.key});
@@ -54,26 +54,29 @@ class MyRidesScreen extends StatelessWidget {
                 subtitle: "View your past trips at a glance.",
                 image: "assets/images/ride_booking.png",
                 ontap: () {
-                     Navigator.push(
-                        context,
-                         AppAnimations.zoomIn(
-                          const RideBookingsScreen(),
-                        ),
-                      );
+                  Navigator.push(
+                    context,
+                    AppAnimations.zoomIn(
+                      const RideBookingHistoryScreen(),
+                    ),
+                  );
                 },
               ),
 
               SizedBox(height: h * 0.025),
 
               /// ---------------- CARD 2 ----------------
-              _rideCard(
-                context,
-                w,
-                h,
-                title: "Ride Sharing",
-                subtitle: "Check details of rides you've shared.",
-                image: "assets/images/ride_sharing2.png",
-              ),
+              _rideCard(context, w, h,
+                  title: "Ride Sharing",
+                  subtitle: "Check details of rides you've shared.",
+                  image: "assets/images/ride_sharing2.png", ontap: () {
+                Navigator.push(
+                  context,
+                  AppAnimations.zoomIn(
+                    const RideSharingHistoryScreen(),
+                  ),
+                );
+              }),
             ],
           ),
         ),
@@ -84,15 +87,11 @@ class MyRidesScreen extends StatelessWidget {
   /// -------------------------------------------------------
   /// REUSABLE RIDE CARD (RESPONSIVE)
   /// -------------------------------------------------------
-  Widget _rideCard(
-    BuildContext context,
-    double w,
-    double h, {
-    required String title,
-    required String subtitle,
-    required String image,
-    VoidCallback? ontap
-  }) {
+  Widget _rideCard(BuildContext context, double w, double h,
+      {required String title,
+      required String subtitle,
+      required String image,
+      VoidCallback? ontap}) {
     final text = Theme.of(context).textTheme;
 
     return InkWell(
@@ -147,7 +146,7 @@ class MyRidesScreen extends StatelessWidget {
                 ),
               ),
             ),
-      
+
             /// ---------------- RIGHT IMAGE CONTAINER ----------------
             Container(
               width: w * 0.28,

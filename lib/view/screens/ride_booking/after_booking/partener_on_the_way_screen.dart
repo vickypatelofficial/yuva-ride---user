@@ -5,9 +5,9 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:yuva_ride/utils/animations.dart';
 import 'package:yuva_ride/utils/app_colors.dart';
 import 'package:yuva_ride/utils/app_fonts.dart';
-import 'package:yuva_ride/view/screens/after_booking/cancel_ride_screen.dart';
-import 'package:yuva_ride/view/screens/after_booking/chat_screen.dart';
-import 'package:yuva_ride/view/screens/after_booking/ride_completed_screen.dart';
+import 'package:yuva_ride/view/screens/ride_booking/after_booking/cancel_ride_screen.dart';
+import 'package:yuva_ride/view/screens/ride_booking/after_booking/chat_screen.dart';
+import 'package:yuva_ride/view/screens/ride_booking/after_booking/ride_completed_screen.dart';
 
 class PartnerOnTheWayScreen extends StatefulWidget {
   const PartnerOnTheWayScreen({super.key});

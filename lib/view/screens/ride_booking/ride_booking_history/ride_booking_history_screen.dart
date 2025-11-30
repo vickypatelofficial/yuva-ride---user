@@ -5,16 +5,16 @@ import 'package:yuva_ride/view/custom_widgets/custom_scaffold_utils.dart';
 import 'package:yuva_ride/utils/animations.dart';
 import 'package:yuva_ride/utils/app_colors.dart';
 import 'package:yuva_ride/utils/app_fonts.dart';
-import 'package:yuva_ride/view/screens/home/navbar/screens/my_ride/ride_detail_screen.dart';
+import 'package:yuva_ride/view/screens/ride_booking/ride_booking_history/ride_booking_detail_screen.dart';
 
-class RideBookingsScreen extends StatefulWidget {
-  const RideBookingsScreen({super.key});
+class RideBookingHistoryScreen extends StatefulWidget {
+  const RideBookingHistoryScreen({super.key});
 
   @override
-  State<RideBookingsScreen> createState() => _RideBookingsScreenState();
+  State<RideBookingHistoryScreen> createState() => _RideBookingHistoryScreenState();
 }
 
-class _RideBookingsScreenState extends State<RideBookingsScreen>
+class _RideBookingHistoryScreenState extends State<RideBookingHistoryScreen>
     with SingleTickerProviderStateMixin {
   late TabController tabCtrl;
 
@@ -112,7 +112,7 @@ class _RideBookingsScreenState extends State<RideBookingsScreen>
   Widget _rideCard(TextTheme text, {required String type}) {
     return InkWell(
       onTap: () {
-         Navigator.push(context, AppAnimations.zoomIn(const RideDetailsScreen()));
+         Navigator.push(context, AppAnimations.zoomIn(const RideBookingDetailsScreen()));
       },
       child: Container(
         decoration: BoxDecoration(

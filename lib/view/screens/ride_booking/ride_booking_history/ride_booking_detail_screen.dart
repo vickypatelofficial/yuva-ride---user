@@ -6,14 +6,14 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:yuva_ride/utils/app_colors.dart';
 import 'package:yuva_ride/utils/app_fonts.dart';
 
-class RideDetailsScreen extends StatefulWidget {
-  const RideDetailsScreen({super.key});
+class RideBookingDetailsScreen extends StatefulWidget {
+  const RideBookingDetailsScreen({super.key});
 
   @override
-  State<RideDetailsScreen> createState() => _RideDetailsScreenState();
+  State<RideBookingDetailsScreen> createState() => _RideBookingDetailsScreenState();
 }
 
-class _RideDetailsScreenState extends State<RideDetailsScreen> {
+class _RideBookingDetailsScreenState extends State<RideBookingDetailsScreen> {
   GoogleMapController? mapController;
 
   @override

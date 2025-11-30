@@ -7,9 +7,9 @@ import 'package:yuva_ride/utils/animations.dart';
 import 'package:yuva_ride/utils/app_colors.dart';
 import 'package:yuva_ride/utils/app_fonts.dart';
 import 'package:yuva_ride/utils/navigation_function.dart';
-import 'package:yuva_ride/view/screens/after_booking/partener_on_the_way_screen.dart';
-import 'package:yuva_ride/view/screens/ride_book/choose_payment_screen.dart';
-import 'package:yuva_ride/view/screens/ride_book/offer_selection_screen.dart';
+import 'package:yuva_ride/view/screens/ride_booking/after_booking/partener_on_the_way_screen.dart';
+import 'package:yuva_ride/view/screens/ride_booking/book_ride/choose_payment_screen.dart';
+import 'package:yuva_ride/view/screens/ride_booking/book_ride/offer_selection_screen.dart';
 
 class RideSelectionScreen extends StatefulWidget {
   const RideSelectionScreen({super.key});

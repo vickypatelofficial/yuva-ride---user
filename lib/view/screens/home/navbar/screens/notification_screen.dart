@@ -30,11 +30,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(height: h * 0.015),
-
-              // ---------------- HEADER ----------------
               Row(
                 children: [
-                  CustomBack(),
+                  const CustomBack(),
                   SizedBox(width: w * 0.03),
                   Text(
                     "Notification",
@@ -48,7 +46,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
               SizedBox(height: h * 0.03),
 
-              // ---------------- SWITCH CARD ----------------
               Container(
                 width: double.infinity,
                 padding: EdgeInsets.symmetric(

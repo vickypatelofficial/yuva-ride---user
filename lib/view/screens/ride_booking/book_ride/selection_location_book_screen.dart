@@ -5,10 +5,10 @@ import 'package:yuva_ride/main.dart';
 import 'package:yuva_ride/utils/animations.dart';
 import 'package:yuva_ride/utils/app_colors.dart';
 import 'package:yuva_ride/utils/app_fonts.dart';
-import 'package:yuva_ride/view/screens/ride_book/ride_booking_screen.dart';
+import 'package:yuva_ride/view/screens/ride_booking/book_ride/ride_selection_screen.dart';
 
-class SelectLocationScreen extends StatelessWidget {
-  const SelectLocationScreen({super.key});
+class SelectLocationBookScreen extends StatelessWidget {
+  const SelectLocationBookScreen({super.key});
 
   void _showRideForSomeoneSheet(BuildContext context) {
     final text = Theme.of(context).textTheme;
