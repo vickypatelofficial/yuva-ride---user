@@ -5,7 +5,11 @@ import 'package:yuva_ride/main.dart';
 import 'package:yuva_ride/utils/animations.dart';
 import 'package:yuva_ride/utils/app_colors.dart';
 import 'package:yuva_ride/utils/app_fonts.dart';
-import 'package:yuva_ride/view/screens/ride_booking/book_ride/ride_selection_screen.dart';
+import 'package:yuva_ride/view/screens/ride_booking/book_ride/book_ride_vehicle_screen.dart';
+
+import 'package:yuva_ride/view/custom_widgets/custom_inkwell.dart';
+import 'package:yuva_ride/view/screens/ride_booking/book_ride/select_location_map_screen.dart';
+import 'package:yuva_ride/view/screens/ride_sharing/share_ride/selection_location_share_screen.dart';
 
 class SelectLocationBookScreen extends StatelessWidget {
   const SelectLocationBookScreen({super.key});
@@ -222,64 +226,142 @@ class SelectLocationBookScreen extends StatelessWidget {
               const SizedBox(height: 25),
 
               /// PICKUP / DROP CARD
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      )
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          _dot(Colors.green),
-                          const SizedBox(width: 14),
-                          Text(
-                            "Select your Pickup location",
-                            style: text.bodyLarge,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Divider(color: Colors.grey.shade300, height: 1),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          _dot(Colors.red),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Text(
-                              "Select your Drop location",
-                              style: text.bodyLarge,
-                            ),
-                          ),
-                          Container(
-                            height: 28,
-                            width: 28,
-                            decoration: BoxDecoration(
-                              color: AppColors.primaryColor,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(Icons.add,
-                                color: Colors.white, size: 18),
+               Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    child: Container(
+                      height: 120,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 18),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(26),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(.15),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
                           )
                         ],
                       ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 25),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          SizedBox(
+                            height: 90,
+                            width: 14,
+                            child: Column(
+                              children: [
+                                _dot(Colors.green),
+                                const SizedBox(
+                                  height: 5,
+                                ),
+                                SizedBox(
+                                  width: 3,
+                                  height: 40,
+                                  child: Column(
+                                    children: [
+                                      Expanded(
+                                        child: Container(
+                                          height: 1,
+                                          color: const Color(0xff070707),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(
+                                  height: 5,
+                                ),
+                                _dot(Colors.red),
+                              ],
+                            ),
+                          ),
+                          SizedBox(
+                            width: screenWidth * .7,
+                            child: Column(
+                              children: [
+                                CustomInkWell(
+                                  elevation: 0,
+                                  backgroundColor: AppColors.white,
+                                  onTap: () {
+                                    Navigator.push(
+                                        context,
+                                        AppAnimations.fade(
+                                            const SelectLocationMapScreen()));
+                                  },
+                                  child: Row(
+                                    children: [
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Text(
+                                          "Select your Pickup location",
+                                          style: text.bodyLarge!.copyWith(
+                                              fontFamily: AppFonts.medium),
+                                        ),
+                                      ),
+                                      // Image.asset(
+                                      //   'assets/images/gps.png',
+                                      //   height: 20,
+                                      //   width: 20,
+                                      //   errorBuilder:
+                                      //       (context, error, stackTrace) {
+                                      //     return SizedBox();
+                                      //   },
+                                      // )
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 5),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Container(
+                                        height: 1,
+                                        color: Colors.grey.shade300,
+                                      ),
+                                    ),
+                                    const Padding(
+                                      padding:
+                                          EdgeInsets.only(left: 5, right: 5),
+                                      child: Icon(Icons.swap_vert,
+                                          color: AppColors.primaryColor),
+                                    ),
+                                    Expanded(
+                                      child: Container(
+                                        height: 1,
+                                        color: Colors.grey.shade300,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 5),
+                                CustomInkWell(
+                                  onTap: () {
+                                    Navigator.push(
+                                        context,
+                                        AppAnimations.fade(
+                                            const SelectLocationMapScreen()));
+                                  },
+                                  child: Row(
+                                    children: [
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Text(
+                                          "Select your Drop location",
+                                          style: text.bodyLarge!.copyWith(
+                                              fontFamily: AppFonts.medium),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),      const SizedBox(height: 25),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 18),
                 child: Text(
@@ -338,7 +420,7 @@ class SelectLocationBookScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(30),
                   onTap: () {
                     Navigator.push(context,
-                        AppAnimations.fadeSlide(const RideSelectionScreen()));
+                        AppAnimations.fadeSlide(const BookRideVehicleScreen()));
                   },
                   child: Container(
                     decoration: BoxDecoration(
@@ -376,7 +458,14 @@ class SelectLocationBookScreen extends StatelessWidget {
       height: 14,
       width: 14,
       decoration:
-          BoxDecoration(color: color, borderRadius: BorderRadius.circular(50)),
+          BoxDecoration(color: color, borderRadius: BorderRadius.circular(50),
+          boxShadow: [
+            BoxShadow(
+              color: color,
+              blurRadius: 7
+            )
+          ]
+          ),
     );
   }
 

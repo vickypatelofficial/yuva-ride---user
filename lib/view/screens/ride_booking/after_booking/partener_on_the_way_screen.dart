@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:yuva_ride/main.dart';
 import 'package:yuva_ride/view/custom_widgets/cusotm_back.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_scaffold_utils.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -8,6 +11,8 @@ import 'package:yuva_ride/utils/app_fonts.dart';
 import 'package:yuva_ride/view/screens/ride_booking/after_booking/cancel_ride_screen.dart';
 import 'package:yuva_ride/view/screens/ride_booking/after_booking/chat_screen.dart';
 import 'package:yuva_ride/view/screens/ride_booking/after_booking/ride_completed_screen.dart';
+import 'package:yuva_ride/view/screens/ride_booking/after_booking/widgets/ripple_loader.dart';
+import 'package:yuva_ride/view/screens/ride_booking/after_booking/widgets/shimmer_card_driver.dart';
 
 class PartnerOnTheWayScreen extends StatefulWidget {
   const PartnerOnTheWayScreen({super.key});
@@ -18,6 +23,32 @@ class PartnerOnTheWayScreen extends StatefulWidget {
 
 class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
   GoogleMapController? mapController;
+  bool isDriverFound = false;
+  Timer? rideTimer;
+
+  int elapsedSeconds = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    startRideTimer();
+  }
+
+  void startRideTimer() async {
+    await Future.delayed(const Duration(seconds: 10));
+    isDriverFound = true;
+    rideTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        elapsedSeconds++;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    rideTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,17 +85,28 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
             left: 0,
             right: 0,
             bottom: 0,
-            child: SizedBox(
-              height: 300,
-              child: GoogleMap(
-                onMapCreated: (c) => mapController = c,
-                initialCameraPosition: const CameraPosition(
-                  target: LatLng(17.4065, 78.4772),
-                  zoom: 14.5,
+            child: Stack(
+              children: [
+                SizedBox(
+                  height: 300,
+                  child: GoogleMap(
+                    onMapCreated: (c) => mapController = c,
+                    initialCameraPosition: const CameraPosition(
+                      target: LatLng(17.4065, 78.4772),
+                      zoom: 14.5,
+                    ),
+                    zoomControlsEnabled: false,
+                    myLocationButtonEnabled: false,
+                  ),
                 ),
-                zoomControlsEnabled: false,
-                myLocationButtonEnabled: false,
-              ),
+                if (!isDriverFound)
+                  Positioned.fill(
+                      top: -screenHeight * .4,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: RippleLoader())
+              ],
             ),
           ),
 
@@ -80,11 +122,31 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
                 child: Column(
                   children: [
                     const SizedBox(height: 12),
-                    _timeAndDistance(text),
-                    const SizedBox(height: 12),
-                    _otpBox(text),
-                    const SizedBox(height: 12),
-                    _driverCard(text),
+                    !isDriverFound
+                        ? Column(
+                            children: [
+                              Padding(
+                                padding:
+                                    const EdgeInsets.only(left: 20, right: 20),
+                                child: Text(
+                                  "Matching with your rider… don't go anywhere...",
+                                  style: text.titleMedium!.copyWith(
+                                      fontFamily: AppFonts.bold, fontSize: 17),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              const ShimmerDriverCard()
+                            ],
+                          )
+                        : Column(
+                            children: [
+                              TripAndDistanceCard(text: text,elapsedSeconds: elapsedSeconds),
+                              const SizedBox(height: 12),
+                              _otpBox(text),
+                              const SizedBox(height: 12),
+                              _driverCard(text),
+                            ],
+                          ),
                     const SizedBox(height: 12),
                     _rideDetails(text),
                     const SizedBox(height: 12),
@@ -104,25 +166,6 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
     );
   }
 
-  Widget _timeAndDistance(TextTheme text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 18),
-      child: Row(
-        children: [
-          Text(
-            "00:01:34",
-            style: text.titleMedium!.copyWith(fontFamily: AppFonts.medium),
-          ),
-          const Spacer(),
-          Text(
-            "Nearby 500 m",
-            style: text.titleMedium!.copyWith(color: Colors.grey),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _otpBox(TextTheme text) {
     return Container(
       padding: const EdgeInsets.all(14),
@@ -132,6 +175,7 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
+            // ignore: deprecated_member_use
             color: Colors.black.withOpacity(.05),
             blurRadius: 12,
             offset: const Offset(0, 3),
@@ -273,9 +317,6 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
     );
   }
 
-  // ---------------------------------------------------------
-  // RIDE DETAILS
-  // ---------------------------------------------------------
   Widget _rideDetails(TextTheme text) {
     return Container(
       padding: const EdgeInsets.all(14),
@@ -310,9 +351,11 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
                     height: 16,
                     width: 16,
                     decoration: const BoxDecoration(
-                      color: Colors.green,
-                      shape: BoxShape.circle,
-                    ),
+                        color: Colors.green,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(color: Colors.green, blurRadius: 7)
+                        ]),
                   ),
 
                   const SizedBox(height: 4),
@@ -331,9 +374,11 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
                     height: 16,
                     width: 16,
                     decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(color: Colors.red, blurRadius: 7)
+                        ]),
                   ),
                 ],
               ),
@@ -405,6 +450,7 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
               CircleAvatar(
                 radius: 24,
                 backgroundColor: Colors.grey.shade300,
+                backgroundImage: AssetImage('assets/images/profile_image.png'),
               ),
               const SizedBox(width: 14),
 
@@ -520,7 +566,7 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(.05),
+                color: Colors.black.withOpacity(.1),
                 blurRadius: 12,
                 offset: const Offset(0, 3),
               )
@@ -530,8 +576,8 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text("Payment",
-                  style:
-                      text.titleMedium!.copyWith(fontFamily: AppFonts.medium)),
+                  style: text.titleMedium!
+                      .copyWith(fontFamily: AppFonts.semiBold)),
               const SizedBox(height: 10),
               Row(
                 children: [
@@ -543,18 +589,34 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Image.asset("assets/images/cash.png", height: 20),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text("Pay After Ride",
-                        style: text.bodyMedium!
-                            .copyWith(fontFamily: AppFonts.medium)),
-                  ),
-                  const Icon(Icons.check_circle,
-                      color: AppColors.primaryColor, size: 26),
-                ],
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(
+                      width: 1, color: AppColors.grey.withOpacity(.5)),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.all(10),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("Pay After Ride",
+                            style: text.bodyMedium!
+                                .copyWith(fontFamily: AppFonts.medium)),
+                        const SizedBox(
+                          height: 5,
+                        ),
+                        Text("Pay with cash/ Qr code",
+                            style: text.bodyMedium!.copyWith(
+                                fontFamily: AppFonts.medium, fontSize: 10)),
+                      ],
+                    ),
+                    const Icon(Icons.check_circle,
+                        color: AppColors.primaryColor, size: 26),
+                  ],
+                ),
               )
             ],
           ),
@@ -573,6 +635,7 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
           padding: const EdgeInsets.symmetric(vertical: 14),
           width: double.infinity,
           decoration: BoxDecoration(
+            color: const Color(0xffFADCDC).withOpacity(.7),
             borderRadius: BorderRadius.circular(30),
             border: Border.all(color: Colors.red, width: 1.4),
           ),
@@ -585,14 +648,6 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _roundIcon(IconData icon, {bool white = false}) {
-    return CircleAvatar(
-      radius: 20,
-      backgroundColor: Colors.white.withOpacity(.3),
-      child: Icon(icon, color: white ? Colors.white : Colors.black),
     );
   }
 
@@ -671,6 +726,53 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
             style: text.bodyMedium!.copyWith(
               fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class TripAndDistanceCard extends StatelessWidget {
+  final TextTheme text;
+  final int elapsedSeconds;
+
+  const TripAndDistanceCard(
+      {super.key, required this.text, required this.elapsedSeconds});
+  String formatTime(int seconds) {
+    int h = seconds ~/ 3600;
+    int m = (seconds % 3600) ~/ 60;
+    int s = seconds % 60;
+    return "${h.toString().padLeft(2, '0')}:"
+        "${m.toString().padLeft(2, '0')}:"
+        "${s.toString().padLeft(2, '0')}";
+  }
+
+  @override
+  Widget build(context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            formatTime(elapsedSeconds),
+            style: text.titleMedium!.copyWith(fontFamily: AppFonts.medium),
+          ),
+          // const Spacer(),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "Partner on the way",
+                style: text.titleMedium!
+                    .copyWith(fontFamily: AppFonts.bold, fontSize: 17),
+              ),
+              Text(
+                "Nearby 500 m",
+                style: text.titleMedium!.copyWith(color: Colors.grey),
+              ),
+            ],
           ),
         ],
       ),

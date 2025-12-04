@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_scaffold_utils.dart';
 import 'package:yuva_ride/utils/animations.dart';
@@ -24,23 +23,23 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    // 🔥 Animation controller
+    //  Animation controller
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1600),
     );
 
-    // 🔥 Bounce (scale)
+    //  Bounce (scale)
     scaleAnim = Tween<double>(begin: 0.4, end: 1.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
     );
 
-    // 🔥 Fade-in
+    //  Fade-in
     fadeAnim = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeIn),
     );
 
-    // 🔥 Slide-up text
+    //  Slide-up text
     slideAnim = Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero)
         .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 

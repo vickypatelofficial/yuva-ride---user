@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart'; 
+uimport 'package:flutter/material.dart'; 
 import 'package:yuva_ride/utils/theme.dart';
 import 'package:yuva_ride/view/splash_screen.dart'; 
 
@@ -19,7 +19,7 @@ class MyApp extends StatelessWidget {
       darkTheme: RAppTheme.darkTheme,
       themeMode: ThemeMode.system,
       debugShowCheckedModeBanner: false,
-        title: 'Yuva Ride',
+        title: 'Yuva Ride User',4 
         home:const SplashScreen()
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:yuva_ride/view/custom_widgets/cusotm_back.dart';
+import 'package:yuva_ride/view/custom_widgets/custom_inkwell.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_scaffold_utils.dart';
 import 'package:yuva_ride/utils/app_colors.dart';
 import 'package:yuva_ride/utils/app_fonts.dart';
@@ -90,7 +91,10 @@ class _CancelRideReasonScreenState extends State<CancelRideReasonScreen> {
           const SizedBox(height: 20),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 18),
-            child: Container(
+            child: CustomInkWell(
+              onTap: () {
+                Navigator.pop(context);
+              },
               padding: const EdgeInsets.symmetric(vertical: 14),
               width: double.infinity,
               decoration: BoxDecoration(

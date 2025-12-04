@@ -1,4 +1,4 @@
-package com.example.bestseed_vendor
+package com.yuva.user
 
 import io.flutter.embedding.android.FlutterActivity
 

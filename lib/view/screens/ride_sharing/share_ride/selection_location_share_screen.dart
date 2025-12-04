@@ -7,7 +7,7 @@ import 'package:yuva_ride/view/custom_widgets/custom_button.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_inkwell.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_scaffold_utils.dart';
 import 'package:yuva_ride/utils/animations.dart';
-import 'package:yuva_ride/view/screens/ride_booking/book_ride/ride_selection_screen.dart';
+import 'package:yuva_ride/view/screens/ride_booking/book_ride/book_ride_vehicle_screen.dart';
 import 'package:yuva_ride/view/screens/ride_sharing/share_ride/ride_sharing_list_screen.dart';
 
 class SelectLocationShareScreen extends StatefulWidget {

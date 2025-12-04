@@ -1,7 +1,9 @@
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/foundation.dart';
 
 import 'package:flutter/material.dart';
 import 'package:yuva_ride/view/custom_widgets/cusotm_back.dart';
+import 'package:yuva_ride/view/custom_widgets/custom_inkwell.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_scaffold_utils.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -176,6 +178,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 Padding(
+                  padding: const EdgeInsets.only(),
+                  child: Image.asset(
+                    "assets/images/pickup_icon.png",
+                    height: 25,
+                    width: 25,
+                  ),
+                ),
+                Padding(
                   padding: const EdgeInsets.only(top: 240, left: 10, right: 10),
                   child: Row(
                     children: [
@@ -299,91 +309,121 @@ class _HomeScreenState extends State<HomeScreen> {
       required String imagePath,
       VoidCallback? ontap}) {
     return Expanded(
-      child: InkWell(
+      child: CustomInkWell(
         onTap: ontap,
-        borderRadius: BorderRadius.circular(18),
-        child: Container(
-          padding: const EdgeInsets.all(0),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.shade300,
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 10% OFF
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: const Color(0xff0F59ED),
-                          borderRadius: BorderRadius.circular(25),
-                        ),
-                        child: Text(
-                          "10% OFF",
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelLarge
-                              ?.copyWith(color: Colors.white),
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      // Title + Arrow
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              title,
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                          ),
-                          Container(
-                            height: 18,
-                            width: 18,
-                            decoration: const BoxDecoration(
-                              color: AppColors.primaryColor,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Center(
-                              child: Icon(
-                                Icons.arrow_forward_ios,
-                                size: 14,
-                                color: AppColors.white,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(subtitle,
-                          style: Theme.of(context).textTheme.bodySmall,
-                          maxLines: 2)
-                    ],
+        height: 106,
+        padding: const EdgeInsets.all(0),
+        elevation: 1,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.shade300,
+              blurRadius: 1,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 10% OFF
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                    margin: const EdgeInsets.only(top: 8, left: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xff0F59ED),
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    child: Text(
+                      "10% OFF",
+                      style: Theme.of(context)
+                          .textTheme
+                          .labelLarge
+                          ?.copyWith(color: Colors.white),
+                    ),
                   ),
+
+                  const SizedBox(height: 2),
+
+                  // Title + Arrow
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      left: 5,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Flexible(
+                          child: SizedBox(
+                            width: screenWidth * .2,
+                            child: AutoSizeText(
+                              title,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(fontSize: 13),
+                              maxLines: 2,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          height: 18,
+                          width: 18,
+                          decoration: const BoxDecoration(
+                            color: AppColors.primaryColor,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.arrow_forward_ios,
+                              size: 11,
+                              color: AppColors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 5, bottom: 5),
+                    child: Text(subtitle,
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(fontSize: 8),
+                        maxLines: 2),
+                  )
+                ],
+              ),
+            ),
+            const SizedBox(width: 4),
+            Container(
+              decoration: BoxDecoration(
+                  color: AppColors.primaryColor.withOpacity(.05),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(50),
+                    bottomLeft: Radius.circular(50),
+                  )),
+              child: ClipRRect(
+                borderRadius: const BorderRadiusGeometry.only(
+                  topRight: Radius.circular(14),
+                  bottomRight: Radius.circular(14),
                 ),
+                child: Image.asset(
+                    height: 100,
+                    imagePath,
+                    width: screenWidth * .17,
+                    fit: BoxFit.fitHeight),
               ),
-              const SizedBox(width: 10),
-              Image.asset(
-                imagePath,
-                height: 80,
-                width: screenWidth * .14,
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

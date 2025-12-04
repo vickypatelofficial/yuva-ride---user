@@ -1,23 +1,30 @@
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
+import 'package:yuva_ride/main.dart';
+import 'package:yuva_ride/services/map_services.dart';
+import 'package:yuva_ride/utils/app_dimensions.dart';
 import 'package:yuva_ride/view/custom_widgets/cusotm_back.dart';
+import 'package:yuva_ride/view/custom_widgets/custom_button.dart';
+import 'package:yuva_ride/view/custom_widgets/custom_inkwell.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_scaffold_utils.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:yuva_ride/utils/animations.dart';
 import 'package:yuva_ride/utils/app_colors.dart';
 import 'package:yuva_ride/utils/app_fonts.dart';
-import 'package:yuva_ride/utils/navigation_function.dart';
 import 'package:yuva_ride/view/screens/ride_booking/after_booking/partener_on_the_way_screen.dart';
 import 'package:yuva_ride/view/screens/ride_booking/book_ride/choose_payment_screen.dart';
 import 'package:yuva_ride/view/screens/ride_booking/book_ride/offer_selection_screen.dart';
 
-class RideSelectionScreen extends StatefulWidget {
-  const RideSelectionScreen({super.key});
+import 'package:flutter/services.dart';
+import 'dart:ui' as ui;
+
+class BookRideFareScreen extends StatefulWidget {
+  const BookRideFareScreen({super.key});
   @override
-  State<RideSelectionScreen> createState() => _RideSelectionScreenState();
+  State<BookRideFareScreen> createState() => _BookRideFareScreenState();
 }
 
-class _RideSelectionScreenState extends State<RideSelectionScreen>
+class _BookRideFareScreenState extends State<BookRideFareScreen>
     with SingleTickerProviderStateMixin {
   GoogleMapController? mapController;
 
@@ -25,7 +32,8 @@ class _RideSelectionScreenState extends State<RideSelectionScreen>
   late AnimationController sheetCtrl;
   late Animation<double> slideAnim;
   late Animation<double> bounceAnim;
-
+  final MapService mapService = MapService();
+  Set<Marker> markers = {};
   // VEHICLE SELECT
   String selectedVehicle = "";
   int selectedFare = 60;
@@ -34,6 +42,9 @@ class _RideSelectionScreenState extends State<RideSelectionScreen>
   @override
   void initState() {
     super.initState();
+    mapService.loadVehicleMarkers().then((value) {
+      setState(() => markers = value);
+    });
 
     sheetCtrl = AnimationController(
       vsync: this,
@@ -53,6 +64,23 @@ class _RideSelectionScreenState extends State<RideSelectionScreen>
     });
   }
 
+  Future<BitmapDescriptor> getResizedMarker(String path, int width) async {
+    final ByteData data = await rootBundle.load(path);
+    final Uint8List bytes = data.buffer.asUint8List();
+
+    final ui.Codec codec =
+        await ui.instantiateImageCodec(bytes, targetWidth: width);
+    final ui.FrameInfo fi = await codec.getNextFrame();
+
+    final Uint8List resizedBytes =
+        (await fi.image.toByteData(format: ui.ImageByteFormat.png))!
+            .buffer
+            .asUint8List();
+
+    // ignore: deprecated_member_use
+    return BitmapDescriptor.fromBytes(resizedBytes);
+  }
+
   @override
   void dispose() {
     sheetCtrl.dispose();
@@ -62,21 +90,20 @@ class _RideSelectionScreenState extends State<RideSelectionScreen>
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-
     return CustomScaffold(
       body: Stack(
         children: [
           /// TOP ORANGE
           Container(height: 120, color: AppColors.primaryColor),
 
-          Positioned(
+          const Positioned(
             top: 30,
             left: 18,
             right: 18,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const CustomBack(),
+                CustomBack(),
               ],
             ),
           ),
@@ -85,9 +112,24 @@ class _RideSelectionScreenState extends State<RideSelectionScreen>
           Positioned.fill(
             top: 90,
             child: GoogleMap(
-              onMapCreated: (c) => mapController = c,
+              onMapCreated: (controller) {
+                mapService.initController(controller);
+
+                Future.delayed(const Duration(milliseconds: 500), () {
+                  mapService.runAdvancedCameraAnimation(
+                      latlng:
+                          const LatLng(17.401599313936217, 78.47910862416029));
+                });
+              },
+              onTap: (argument) {
+                print(argument.latitude);
+                print(argument.longitude);
+              },
               initialCameraPosition: const CameraPosition(
-                  target: LatLng(17.4065, 78.4772), zoom: 14.5),
+                target: LatLng(17.4075, 78.4764),
+                zoom: 13.5,
+              ),
+              markers: markers,
               zoomControlsEnabled: false,
               myLocationButtonEnabled: false,
             ),
@@ -114,15 +156,14 @@ class _RideSelectionScreenState extends State<RideSelectionScreen>
     return Align(
       alignment: Alignment.bottomCenter,
       child: Container(
-        height: selectedVehicle.isEmpty
-            ? MediaQuery.of(context).size.height * .52
-            : MediaQuery.of(context).size.height * .35,
+        height: MediaQuery.of(context).size.height * .38,
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
           boxShadow: [
             BoxShadow(
+              // ignore: deprecated_member_use
               color: Colors.black.withOpacity(.22),
               blurRadius: 18,
               offset: const Offset(0, -4),
@@ -132,21 +173,17 @@ class _RideSelectionScreenState extends State<RideSelectionScreen>
         child: Column(
           children: [
             _topHandle(),
-
             const SizedBox(height: 10),
-            if (selectedVehicle.isEmpty) _locationCard(text),
-            if (selectedVehicle.isEmpty) const SizedBox(height: 10),
-
-            /// -------------------------
-            /// VEHICLE LIST OR FARE BOX
-            /// -------------------------
-            Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 350),
-                child: selectedVehicle.isEmpty
-                    ? _vehicleList(text)
-                    : _fareBox(text),
-              ),
+            _fareBox(text),
+            const SizedBox(height: 20),
+            _paymentBar(text), 
+             const SizedBox(height: 20,),
+            CustomButton(
+              onPressed: () {
+                Navigator.push(context,
+                    AppAnimations.zoomOut(const PartnerOnTheWayScreen()));
+              },
+              text: "Book a ride",
             ),
           ],
         ),
@@ -154,11 +191,12 @@ class _RideSelectionScreenState extends State<RideSelectionScreen>
     );
   }
 
-  Widget _vehicleList(TextTheme text) {
+  Widget _vehicleList(TextTheme text, String selectedVehicle) {
     return SingleChildScrollView(
       child: Column(
         children: [
           _vehicleItem(
+            isSelected: selectedVehicle == "Bike",
             text,
             icon: "assets/images/bike_book.png",
             title: "Bike",
@@ -172,6 +210,7 @@ class _RideSelectionScreenState extends State<RideSelectionScreen>
             title: "Auto",
             price: "₹45",
             cutPrice: "₹60",
+            isSelected: selectedVehicle == "Auto",
           ),
           const SizedBox(height: 10),
           _vehicleItem(
@@ -180,6 +219,7 @@ class _RideSelectionScreenState extends State<RideSelectionScreen>
             title: "Cab Non AC",
             price: "₹45",
             cutPrice: "₹90",
+            isSelected: selectedVehicle == "Cab Non AC",
           ),
           const SizedBox(height: 10),
           _vehicleItem(
@@ -188,6 +228,7 @@ class _RideSelectionScreenState extends State<RideSelectionScreen>
             title: "Cab AC",
             price: "₹45",
             cutPrice: "₹120",
+            isSelected: selectedVehicle == "Cab AC",
           ),
         ],
       ),
@@ -196,13 +237,14 @@ class _RideSelectionScreenState extends State<RideSelectionScreen>
 
   Widget _fareBox(TextTheme text) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        SizedBox(height: screenHeight * .03),
         Text("Choose your amount",
             style: text.titleMedium!.copyWith(fontWeight: FontWeight.bold)),
         Text("Pick your amount and pay your fare.",
             style: text.bodySmall!.copyWith(color: Colors.grey)),
-        const SizedBox(height: 10),
+        SizedBox(height: screenHeight * .03),
 
         /// FARE OPTIONS
         Row(
@@ -214,8 +256,8 @@ class _RideSelectionScreenState extends State<RideSelectionScreen>
               onTap: () => setState(() => selectedFare = value),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                // height: 40,
-                width: 70,
+                height: screenHeight * .05,
+                width: screenWidth * .2,
                 decoration: BoxDecoration(
                   color: isSelected ? AppColors.primaryColor : Colors.white,
                   borderRadius: BorderRadius.circular(12),
@@ -232,7 +274,7 @@ class _RideSelectionScreenState extends State<RideSelectionScreen>
                 ),
                 child: Center(
                   child: Text(
-                    "₹$value",
+                  isSelected?"₹$value":  "+₹$value",
                     style: text.titleMedium!.copyWith(
                       color: isSelected ? Colors.white : Colors.black,
                     ),
@@ -241,33 +283,6 @@ class _RideSelectionScreenState extends State<RideSelectionScreen>
               ),
             );
           }).toList(),
-        ),
-
-        const SizedBox(height: 10),
-
-        _paymentBar(text),
-
-        const SizedBox(height: 10),
-
-        /// BOOK RIDE BUTTON
-        InkWell(
-          onTap: () {
-            Navigator.push(
-                context, AppAnimations.zoomOut(const PartnerOnTheWayScreen()));
-          },
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            decoration: BoxDecoration(
-              color: AppColors.primaryColor,
-              borderRadius: BorderRadius.circular(30),
-            ),
-            child: Center(
-              child: Text("Book a ride",
-                  style: text.titleMedium!.copyWith(
-                      color: Colors.white, fontFamily: AppFonts.medium)),
-            ),
-          ),
         ),
       ],
     );
@@ -280,63 +295,78 @@ class _RideSelectionScreenState extends State<RideSelectionScreen>
       {required String icon,
       required String title,
       required String price,
+      required bool isSelected,
       required String cutPrice}) {
-    return GestureDetector(
+    return CustomInkWell(
       onTap: () => setState(() => selectedVehicle = title),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withOpacity(.05),
-                blurRadius: 6,
-                offset: const Offset(0, 3))
-          ],
-        ),
-        child: Row(
-          children: [
-            Image.asset(icon, height: 38),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title,
-                      style: text.titleMedium!
-                          .copyWith(fontFamily: AppFonts.medium)),
-                  Text("Arrival in 2mins",
-                      style: text.labelMedium!
-                          .copyWith(color: AppColors.primaryColor)),
-                ],
-              ),
-            ),
-            Column(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(.05),
+              blurRadius: 6,
+              offset: const Offset(0, 3))
+        ],
+      ),
+      child: Row(
+        children: [
+          Image.asset(icon, height: 38),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(price,
+                Text(title,
                     style: text.titleMedium!
                         .copyWith(fontFamily: AppFonts.medium)),
-                Text(cutPrice,
-                    style: text.bodySmall!
-                        .copyWith(decoration: TextDecoration.lineThrough)),
+                Text("Arrival in 2mins",
+                    style: text.labelMedium!
+                        .copyWith(color: AppColors.primaryColor)),
               ],
             ),
-            const SizedBox(width: 10),
-            CircleAvatar(
-              radius: 10,
-              backgroundColor: Colors.white,
+          ),
+          Column(
+            children: [
+              Text(price,
+                  style:
+                      text.titleMedium!.copyWith(fontFamily: AppFonts.medium)),
+              Text(cutPrice,
+                  style: text.bodySmall!
+                      .copyWith(decoration: TextDecoration.lineThrough)),
+            ],
+          ),
+          const SizedBox(width: 10),
+          CircleAvatar(
+            radius: 10,
+            backgroundColor: Colors.white,
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                border: Border.all(
+                    color:
+                        !isSelected ? AppColors.grey : AppColors.primaryColor),
+                shape: BoxShape.circle,
+              ),
               child: Container(
+                margin: const EdgeInsets.all(3),
                 height: 18,
                 width: 18,
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey),
+                  color: !isSelected
+                      ? AppColors.transparent
+                      : AppColors.primaryColor,
+                  border: Border.all(
+                      color: !isSelected
+                          ? AppColors.transparent
+                          : AppColors.primaryColor),
                   shape: BoxShape.circle,
                 ),
               ),
-            )
-          ],
-        ),
+            ),
+          )
+        ],
       ),
     );
   }
@@ -345,12 +375,13 @@ class _RideSelectionScreenState extends State<RideSelectionScreen>
   Widget _locationCard(TextTheme text) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
+              // ignore: deprecated_member_use
               color: Colors.black.withOpacity(.08),
               blurRadius: 10,
               offset: const Offset(0, 4))
@@ -371,16 +402,18 @@ class _RideSelectionScreenState extends State<RideSelectionScreen>
                     height: 16,
                     width: 16,
                     decoration: const BoxDecoration(
-                      color: Colors.green,
-                      shape: BoxShape.circle,
-                    ),
+                        color: Colors.green,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(color: Colors.green, blurRadius: 7)
+                        ]),
                   ),
 
                   const SizedBox(height: 4),
 
                   // Vertical line
                   Container(
-                    height: 35,
+                    height: 28,
                     width: 2,
                     color: Colors.black,
                   ),
@@ -392,9 +425,11 @@ class _RideSelectionScreenState extends State<RideSelectionScreen>
                     height: 16,
                     width: 16,
                     decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(color: Colors.red, blurRadius: 7)
+                        ]),
                   ),
                 ],
               ),
@@ -407,12 +442,10 @@ class _RideSelectionScreenState extends State<RideSelectionScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Pickup
-                    Text(
-                      "9-120, Madhapur metro station,\nHyderabad",
-                      style: text.bodyLarge,
-                    ),
+                    Text("9-120, Madhapur metro station,\nHyderabad",
+                        style: text.bodyLarge, maxLines: 1),
 
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 3),
 
                     // Divider (aligned to text)
                     Container(
@@ -427,6 +460,7 @@ class _RideSelectionScreenState extends State<RideSelectionScreen>
                     Text(
                       "9-120, Hitech metro station,\nHyderabad",
                       style: text.bodyLarge,
+                      maxLines: 1,
                     ),
                   ],
                 ),
@@ -509,7 +543,7 @@ class _RideSelectionScreenState extends State<RideSelectionScreen>
         borderRadius: BorderRadius.circular(14),
         splashColor: Colors.orange.withOpacity(.2),
         child: Container(
-          height: 45,
+          height: 35,
           width: MediaQuery.of(context).size.width * 0.23,
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Row(

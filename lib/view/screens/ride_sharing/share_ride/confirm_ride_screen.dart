@@ -161,7 +161,8 @@ class CheckDetailsScreen extends StatelessWidget {
             child: CustomButton(
               text: "Confirm",
               onPressed: () {
-                Navigator.push(context, AppAnimations.fade(const BookingSuccessScreen()));
+                Navigator.push(
+                    context, AppAnimations.fade(const BookingSuccessScreen()));
               },
               height: 48,
             ),
