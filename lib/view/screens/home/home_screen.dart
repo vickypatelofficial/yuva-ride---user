@@ -2,6 +2,7 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/foundation.dart';
 
 import 'package:flutter/material.dart';
+import 'package:yuva_ride/services/local_storage.dart';
 import 'package:yuva_ride/view/custom_widgets/cusotm_back.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_inkwell.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_scaffold_utils.dart';
@@ -74,11 +75,19 @@ class _HomeScreenState extends State<HomeScreen> {
             automaticallyImplyLeading: false,
             title: Row(
               children: [
-                Text(
-                  "Yuva Rider",
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: Colors.white,
-                      ),
+                InkWell(
+                  onTap: () async{
+                  //   LocalStorage.clearLocalStorate();
+                  //   return;
+                  // String userId=  await LocalStorage.getUserId()??"";
+                  // print(userId);
+                  },
+                  child: Text(
+                    "Yuva Rider",
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          color: Colors.white,
+                        ),
+                  ),
                 ),
                 const Spacer(),
                 Container(

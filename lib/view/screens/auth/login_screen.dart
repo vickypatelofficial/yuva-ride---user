@@ -1,5 +1,10 @@
-
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:yuva_ride/controller/auth_provider.dart';
+import 'package:yuva_ride/services/local_storage.dart';
+import 'package:yuva_ride/services/status.dart';
+import 'package:yuva_ride/utils/globle_func.dart';
+import 'package:yuva_ride/view/custom_widgets/custom_button.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_scaffold_utils.dart';
 import 'package:yuva_ride/utils/animations.dart';
 import 'package:yuva_ride/utils/app_colors.dart';
@@ -27,7 +32,6 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void initState() {
     super.initState();
-
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
@@ -104,6 +108,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.read<AuthProvider>();
     // ignore: deprecated_member_use
     return CustomScaffold(
       backgroundColor: AppColors.primaryColor,
@@ -147,7 +152,7 @@ class _LoginScreenState extends State<LoginScreen>
               ),
             ),
           ),
-    
+
           /// ------------------- BOTTOM SHEET -------------------
           Align(
             alignment: Alignment.bottomCenter,
@@ -158,8 +163,7 @@ class _LoginScreenState extends State<LoginScreen>
                     const EdgeInsets.symmetric(horizontal: 22, vertical: 25),
                 decoration: const BoxDecoration(
                   color: Colors.white,
-                  borderRadius:
-                      BorderRadius.vertical(top: Radius.circular(28)),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -176,7 +180,7 @@ class _LoginScreenState extends State<LoginScreen>
                       ),
                     ),
                     const SizedBox(height: 14),
-    
+
                     /// ------------------ MOBILE FIELD ------------------
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 250),
@@ -228,7 +232,7 @@ class _LoginScreenState extends State<LoginScreen>
                         ],
                       ),
                     ),
-    
+
                     /// ANIMATED ERROR TEXT
                     AnimatedSlide(
                       offset: showError ? Offset.zero : const Offset(0, -0.3),
@@ -254,64 +258,74 @@ class _LoginScreenState extends State<LoginScreen>
                               ),
                       ),
                     ),
-    
+
                     const SizedBox(height: 18),
-    
+
                     /// ------------------ CONTINUE BUTTON ------------------
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryColor,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        onPressed: () {
-                          if (validateMobile()) {
-                            Navigator.of(context).push(
-                                AppAnimations.slideBottomToTop(
-                                    OTPVerificationScreen(
-                              mobile: mobileController.text,
-                            )));
-                          }
-                        },
-                        child: const Text(
-                          "Continue",
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 17,
-                              fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ),
-    
+                    Consumer<AuthProvider>(builder: (context, provider, _) {
+                      return SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: CustomButton(
+                            isLoading: isStatusLoading(
+                                    provider.requestOtpState.status) ||
+                                isStatusLoading(
+                                    provider.mobileCheckState.status),
+                            onPressed: () async {
+                              if (validateMobile()) {
+                                await provider.requestOtp(
+                                    phone: mobileController.text, ccode: '+91');
+                                if (isStatusSuccess(
+                                    provider.requestOtpState.status)) {
+                                  Navigator.of(context).push(
+                                      AppAnimations.slideBottomToTop(
+                                          OTPVerificationScreen(
+                                    isUserExist: provider.requestOtpState
+                                            .data?['is_existing_user'] ??
+                                        false,
+                                    userId: provider
+                                            .requestOtpState.data?['user_id']
+                                            ?.toString() ??
+                                        "",
+                                    otp:
+                                        provider.requestOtpState.data?['otp'] ??
+                                            "",
+                                    mobile: mobileController.text,
+                                  )));
+                                }
+                              }
+                            },
+                            text: 'Continue'),
+                      );
+                    }),
+
                     const SizedBox(height: 16),
-    
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text(
-                          "Don’t have an account?",
-                          style:
-                              TextStyle(fontSize: 15, color: Colors.black54),
-                        ),
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.push(context, AppAnimations.slideTopToBottom(const SignupScreen()));
-                          },
-                          child: const Text(
-                            " Sign up",
-                            style: TextStyle(
-                              fontSize: 15,
-                              color: Colors.orange,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+
+                    // Row(
+                    //   mainAxisAlignment: MainAxisAlignment.center,
+                    //   children: [
+                    //     const Text(
+                    //       "Don’t have an account?",
+                    //       style: TextStyle(fontSize: 15, color: Colors.black54),
+                    //     ),
+                    //     GestureDetector(
+                    //       onTap: () {
+                    //         Navigator.push(
+                    //             context,
+                    //             AppAnimations.slideTopToBottom(
+                    //                 const SignupScreen()));
+                    //       },
+                    //       child: const Text(
+                    //         " Sign up",
+                    //         style: TextStyle(
+                    //           fontSize: 15,
+                    //           color: Colors.orange,
+                    //           fontWeight: FontWeight.w600,
+                    //         ),
+                    //       ),
+                    //     ),
+                    //   ],
+                    // ),
                     const SizedBox(height: 8),
                   ],
                 ),

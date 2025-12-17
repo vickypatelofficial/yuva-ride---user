@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:yuva_ride/services/local_storage.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_scaffold_utils.dart';
 import 'package:yuva_ride/utils/animations.dart';
 import 'package:yuva_ride/utils/app_colors.dart';
+import 'package:yuva_ride/view/screens/auth/signup_screen.dart';
 import 'package:yuva_ride/view/screens/home/home_screen.dart';
 import 'package:yuva_ride/view/screens/onboarding_screen.dart';
 
@@ -55,7 +57,14 @@ class _SplashScreenState extends State<SplashScreen>
           const AssetImage("assets/images/ride_booking.png"), context);
       await precacheImage(
           const AssetImage("assets/images/ride_sharing.png"), context);
+      navigation();
+      // ignore: use_build_context_synchronously
+    });
+  }
 
+  void navigation() async {
+    bool isLogin = await LocalStorage.isLoggedIn();
+    if (!isLogin) {
       Future.microtask(() {
         Navigator.pushReplacement(
             // ignore: use_build_context_synchronously
@@ -63,9 +72,27 @@ class _SplashScreenState extends State<SplashScreen>
             AppAnimations.fade(const OnboardingScreen(),
                 transitionDuration: const Duration(milliseconds: 2300)));
       });
-
-      // ignore: use_build_context_synchronously
-    });
+    } else {
+      bool isRequireSignup = await LocalStorage.getRequireSignup() ?? true;
+      if (isRequireSignup) {
+        String userId = await LocalStorage.getUserId() ?? '';
+        Future.microtask(() {
+          Navigator.pushReplacement(
+              // ignore: use_build_context_synchronously
+              context,
+              AppAnimations.fade(SignupScreen(userId: userId),
+                  transitionDuration: const Duration(milliseconds: 2300)));
+        });
+      } else {
+        Future.microtask(() {
+          Navigator.pushReplacement(
+              // ignore: use_build_context_synchronously
+              context,
+              AppAnimations.fade(const HomeScreen(),
+                  transitionDuration: const Duration(milliseconds: 2300)));
+        });
+      }
+    }
   }
 
   @override

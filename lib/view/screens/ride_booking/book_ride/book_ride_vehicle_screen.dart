@@ -1,7 +1,13 @@
+import 'dart:math';
+
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:yuva_ride/controller/book_ride_provider.dart';
+import 'package:yuva_ride/controller/home_provider.dart';
 import 'package:yuva_ride/main.dart';
 import 'package:yuva_ride/services/map_services.dart';
+import 'package:yuva_ride/utils/constatns.dart';
 import 'package:yuva_ride/view/custom_widgets/cusotm_back.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_button.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_inkwell.dart';
@@ -33,7 +39,7 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
   late Animation<double> slideAnim;
   late Animation<double> bounceAnim;
   final MapService mapService = MapService();
-  Set<Marker> markers = {};
+
   // VEHICLE SELECT
   String selectedVehicle = "";
   int selectedFare = 60;
@@ -42,10 +48,10 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
   @override
   void initState() {
     super.initState();
-    mapService.loadVehicleMarkers().then((value) {
-      setState(() => markers = value);
-    });
-
+    // mapService.loadVehicleMarkers().then((value) {
+    //   setState(() => markers = value);
+    // });
+    _setupRouteOnMap();
     sheetCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
@@ -81,6 +87,53 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
     return BitmapDescriptor.fromBytes(resizedBytes);
   }
 
+  Future<void> _setupRouteOnMap() async {
+    final bookingController = context.read<BookRideProvider>();
+    final LatLng pickupLatLng = bookingController.pickupLocation!.latLng;
+
+    final LatLng dropLatLng = bookingController.dropLocation!.latLng;
+    // 1️⃣ Add markers
+    await mapService.addPickupMarker(pickupLatLng);
+    await mapService.addDropMarker(dropLatLng);
+
+    // 2️⃣ Get polyline points
+    final points = await mapService.getRoutePolyline(
+      pickupLatLng,
+      dropLatLng,
+      Constants.mapkey,
+    );
+
+    if (points.isNotEmpty) {
+      mapService.drawPolyline(
+        points: points,
+        color: AppColors.primaryColor,
+      );
+    }
+
+    // 3️⃣ Fit camera to route
+    _fitCameraBounds(pickupLatLng, dropLatLng);
+
+    // 4️⃣ Rebuild UI
+    if (mounted) setState(() {});
+  }
+
+  void _fitCameraBounds(LatLng p1, LatLng p2) {
+    final bounds = LatLngBounds(
+      southwest: LatLng(
+        min(p1.latitude, p2.latitude),
+        min(p1.longitude, p2.longitude),
+      ),
+      northeast: LatLng(
+        max(p1.latitude, p2.latitude),
+        max(p1.longitude, p2.longitude),
+      ),
+    );
+
+    mapService.mapController?.animateCamera(
+      CameraUpdate.newLatLngBounds(bounds, 80),
+    );
+  }
+
   @override
   void dispose() {
     sheetCtrl.dispose();
@@ -89,6 +142,8 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
 
   @override
   Widget build(BuildContext context) {
+    final bookingProvider = context.read<BookRideProvider>();
+    final homeProvider = context.read<HomeProvider>();
     final text = Theme.of(context).textTheme;
     return CustomScaffold(
       body: Stack(
@@ -111,27 +166,35 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
           /// GOOGLE MAP
           Positioned.fill(
             top: 90,
+            bottom: screenHeight * .45,
             child: GoogleMap(
-              onMapCreated: (controller) {
+              onMapCreated: (controller) async {
                 mapService.initController(controller);
+                await _setupRouteOnMap();
 
-                Future.delayed(const Duration(milliseconds: 500), () {
-                  mapService.runAdvancedCameraAnimation(
-                      latlng:
-                          const LatLng(17.401599313936217, 78.47910862416029));
-                });
+                // Future.delayed(const Duration(milliseconds: 500), () {
+                //   mapService.runAdvancedCameraAnimation(
+                //     latlng: bookingController.pickupLocation?.latLng ??
+                //         const LatLng(17.4075, 78.4764),
+                //   );
+                // });
               },
-              onTap: (argument) {
-                print(argument.latitude);
-                print(argument.longitude);
-              },
-              initialCameraPosition: const CameraPosition(
-                target: LatLng(17.4075, 78.4764),
+
+              initialCameraPosition: CameraPosition(
+                target: bookingProvider.pickupLocation?.latLng ??
+                    const LatLng(17.4075, 78.4764),
                 zoom: 13.5,
               ),
-              markers: markers,
+              markers: mapService.markers,
+              polylines: mapService.polylines,
+
               zoomControlsEnabled: false,
               myLocationButtonEnabled: false,
+
+              /// 👇 MAIN LOGIC HERE
+              onTap: (LatLng latLng) async {
+                _setupRouteOnMap();
+              },
             ),
           ),
 
@@ -153,6 +216,7 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
   // BOTTOM SHEET
   // -----------------------------
   Widget _bottomSheet(BuildContext context, TextTheme text) {
+    final homeProvider = context.read<HomeProvider>();
     return Align(
       alignment: Alignment.bottomCenter,
       child: Container(
@@ -178,7 +242,62 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
             Expanded(
               child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 350),
-                  child: _vehicleList(text, selectedVehicle)),
+                  child: SingleChildScrollView(
+                    child: Column(
+                        children: List.generate(
+                            homeProvider.homeState.data?.categoryList?.length ??
+                                0, (index) {
+                      final data =
+                          homeProvider.homeState.data?.categoryList?[index];
+                      return _vehicleItem(
+                        isSelected: selectedVehicle == "Bike",
+                        text,
+                        icon: "assets/images/bike_book.png",
+                        title: data?.name ?? "",
+                        price: "₹45",
+                        cutPrice: "₹65",
+                      );
+                    })
+
+                        // [
+                        //   _vehicleItem(
+                        //     isSelected: selectedVehicle == "Bike",
+                        //     text,
+                        //     icon: "assets/images/bike_book.png",
+                        //     title: "Bike",
+                        //     price: "₹45",
+                        //     cutPrice: "₹65",
+                        //   ),
+                        //   const SizedBox(height: 5),
+                        //   _vehicleItem(
+                        //     text,
+                        //     icon: "assets/images/auto_book.png",
+                        //     title: "Auto",
+                        //     price: "₹45",
+                        //     cutPrice: "₹60",
+                        //     isSelected: selectedVehicle == "Auto",
+                        //   ),
+                        //   const SizedBox(height: 5),
+                        //   _vehicleItem(
+                        //     text,
+                        //     icon: "assets/images/cab_non_ac.png",
+                        //     title: "Cab Non AC",
+                        //     price: "₹45",
+                        //     cutPrice: "₹90",
+                        //     isSelected: selectedVehicle == "Cab Non AC",
+                        //   ),
+                        //   const SizedBox(height: 5),
+                        //   _vehicleItem(
+                        //     text,
+                        //     icon: "assets/images/cab_ac.png",
+                        //     title: "Cab AC",
+                        //     price: "₹45",
+                        //     cutPrice: "₹120",
+                        //     isSelected: selectedVehicle == "Cab AC",
+                        //   ),
+                        // ],
+                        ),
+                  )),
             ),
             _paymentBar(text),
             const SizedBox(
@@ -186,57 +305,13 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
             ),
             CustomButton(
               onPressed: () {
-                Navigator.push(context,
-                    AppAnimations.zoomOut(const BookRideFareScreen()));
+                Navigator.push(
+                    context, AppAnimations.zoomOut(const BookRideFareScreen()));
               },
               text: "Book a ride",
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _vehicleList(TextTheme text, String selectedVehicle) {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          _vehicleItem(
-            isSelected: selectedVehicle == "Bike",
-            text,
-            icon: "assets/images/bike_book.png",
-            title: "Bike",
-            price: "₹45",
-            cutPrice: "₹65",
-          ),
-          const SizedBox(height: 5),
-          _vehicleItem(
-            text,
-            icon: "assets/images/auto_book.png",
-            title: "Auto",
-            price: "₹45",
-            cutPrice: "₹60",
-            isSelected: selectedVehicle == "Auto",
-          ),
-          const SizedBox(height: 5),
-          _vehicleItem(
-            text,
-            icon: "assets/images/cab_non_ac.png",
-            title: "Cab Non AC",
-            price: "₹45",
-            cutPrice: "₹90",
-            isSelected: selectedVehicle == "Cab Non AC",
-          ),
-          const SizedBox(height: 5),
-          _vehicleItem(
-            text,
-            icon: "assets/images/cab_ac.png",
-            title: "Cab AC",
-            price: "₹45",
-            cutPrice: "₹120",
-            isSelected: selectedVehicle == "Cab AC",
-          ),
-        ],
       ),
     );
   }
@@ -332,10 +407,9 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
     return Padding(
       padding: const EdgeInsets.all(4.0),
       child: CustomInkWell(
-        onTap: () => setState(() => selectedVehicle = title), 
+        onTap: () => setState(() => selectedVehicle = title),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         elevation: 1,
-        
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -354,10 +428,9 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  
                   Text("Arrival in 2mins",
                       style: text.labelMedium!
-                          .copyWith(color: AppColors.success,fontSize: 13)),
+                          .copyWith(color: AppColors.success, fontSize: 13)),
                   Text(title,
                       style: text.titleMedium!
                           .copyWith(fontFamily: AppFonts.semiBold)),
@@ -367,9 +440,11 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
             Row(
               children: [
                 Text(price,
-                    style:
-                        text.titleMedium!.copyWith(fontFamily: AppFonts.medium)),
-                        SizedBox(width: 5,),
+                    style: text.titleMedium!
+                        .copyWith(fontFamily: AppFonts.medium)),
+                SizedBox(
+                  width: 5,
+                ),
                 Text(cutPrice,
                     style: text.bodySmall!
                         .copyWith(decoration: TextDecoration.lineThrough)),
@@ -383,8 +458,9 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
                 decoration: BoxDecoration(
                   color: AppColors.white,
                   border: Border.all(
-                      color:
-                          !isSelected ? AppColors.grey : AppColors.primaryColor),
+                      color: !isSelected
+                          ? AppColors.grey
+                          : AppColors.primaryColor),
                   shape: BoxShape.circle,
                 ),
                 child: Container(
@@ -412,6 +488,7 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
 
   // -----------------------------
   Widget _locationCard(TextTheme text) {
+    final bookRideProvider = context.read<BookRideProvider>();
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(8),
@@ -480,7 +557,7 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Pickup
-                    Text("9-120, Madhapur metro station,\nHyderabad",
+                    Text(bookRideProvider.pickupLocation?.address ?? '',
                         style: text.bodyLarge, maxLines: 1),
 
                     const SizedBox(height: 3),
@@ -496,7 +573,7 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
 
                     // Drop
                     Text(
-                      "9-120, Hitech metro station,\nHyderabad",
+                      bookRideProvider.dropLocation?.address ?? '',
                       style: text.bodyLarge,
                       maxLines: 1,
                     ),
