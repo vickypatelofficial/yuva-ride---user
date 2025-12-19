@@ -43,7 +43,7 @@ class ApiService {
       print('========url=========');
       print(url);
       String endPoint =
-          'https://yuvaride.techlanditsolutions.com/customer/home';
+          url;
       final response = await _dio.get(endPoint);
       print('===========++++++++=========');
       print(response.data.toString());

@@ -104,31 +104,56 @@ flutter:
   # "family" key with the font family name, and a "fonts" key with a
   # list giving the asset and other descriptors for the font. For
   # example:
+  # fonts:
+  #   - family: PoppinsBlack
+  #     fonts:
+  #       - asset: assets/fonts/Poppins-Black.ttf
+  #   - family: PoppinsBold
+  #     fonts:
+  #       - asset: assets/fonts/Poppins-Bold.ttf
+  #   - family: PoppinsExtraBold
+  #     fonts:
+  #       - asset: assets/fonts/Poppins-ExtraBold.ttf
+  #   - family: PoppinsLight
+  #     fonts:
+  #       - asset: assets/fonts/Poppins-Light.ttf
+  #   - family: PoppinsMedium
+  #     fonts:
+  #       - asset: assets/fonts/Poppins-Medium.ttf
+  #   - family: PoppinsRegular
+  #     fonts:
+  #       - asset: assets/fonts/Poppins-Regular.ttf
+  #   - family: PoppinsSemiBold
+  #     fonts:
+  #       - asset: assets/fonts/Poppins-SemiBold.ttf
+  #   - family: PoppinsThin
+  #     fonts:
+  #       - asset: assets/fonts/Poppins-Thin.ttf
   fonts:
-    - family: PoppinsBlack
+    - family: InterBlack
       fonts:
-        - asset: assets/fonts/Poppins-Black.ttf
-    - family: PoppinsBold
+        - asset: assets/fonts/Inter-Black.ttf
+    - family: InterBold
       fonts:
-        - asset: assets/fonts/Poppins-Bold.ttf
-    - family: PoppinsExtraBold
+        - asset: assets/fonts/Inter-Bold.ttf
+    - family: InterExtraBold
       fonts:
-        - asset: assets/fonts/Poppins-ExtraBold.ttf
-    - family: PoppinsLight
+        - asset: assets/fonts/Inter-ExtraBold.ttf
+    - family: InterLight
       fonts:
-        - asset: assets/fonts/Poppins-Light.ttf
-    - family: PoppinsMedium
+        - asset: assets/fonts/Inter-Light.ttf
+    - family: InterMedium
       fonts:
-        - asset: assets/fonts/Poppins-Medium.ttf
-    - family: PoppinsRegular
+        - asset: assets/fonts/Inter-Medium.ttf
+    - family: InterRegular
       fonts:
-        - asset: assets/fonts/Poppins-Regular.ttf
-    - family: PoppinsSemiBold
+        - asset: assets/fonts/Inter-Regular.ttf
+    - family: InterSemiBold
       fonts:
-        - asset: assets/fonts/Poppins-SemiBold.ttf
-    - family: PoppinsThin
+        - asset: assets/fonts/Inter-SemiBold.ttf
+    - family: InterThin
       fonts:
-        - asset: assets/fonts/Poppins-Thin.ttf
+        - asset: assets/fonts/Inter-Thin.ttf
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/custom-fonts/#from-packages

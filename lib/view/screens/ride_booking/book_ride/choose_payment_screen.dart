@@ -1,5 +1,6 @@
-
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:yuva_ride/controller/book_ride_provider.dart';
 import 'package:yuva_ride/view/custom_widgets/cusotm_back.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_scaffold_utils.dart';
 import 'package:yuva_ride/utils/app_colors.dart';
@@ -18,7 +19,9 @@ class _ChoosePaymentModeScreenState extends State<ChoosePaymentModeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    final bookProvider = context.read<BookRideProvider>();
 
     return CustomScaffold(
       backgroundColor: Colors.white,
@@ -32,11 +35,11 @@ class _ChoosePaymentModeScreenState extends State<ChoosePaymentModeScreen> {
             padding: const EdgeInsets.only(top: 50, left: 18, right: 18),
             child: Row(
               children: [
-               CustomBack(),
+                CustomBack(),
                 const SizedBox(width: 12),
                 Text(
                   "Choose Payment mode",
-                  style: text.titleMedium!.copyWith(
+                  style: textTheme.titleMedium!.copyWith(
                       color: Colors.white, fontFamily: AppFonts.medium),
                 ),
               ],
@@ -44,36 +47,61 @@ class _ChoosePaymentModeScreenState extends State<ChoosePaymentModeScreen> {
           ),
 
           const SizedBox(height: 20),
- 
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 18),
-              children: [
-                _paymentTile(
-                  text,
-                  title: "Cash",
-                  subtitle: "Pay with cash/ Qr code",
-                  value: "Cash",
-                  icon: Icons.currency_rupee,
-                ),
-                const SizedBox(height: 15),
-                _paymentTile(
-                  text,
-                  title: "Pay by UPI",
-                  subtitle: "Pay using Phonepe, Googlepay",
-                  value: "UPI",
-                  icon: Icons.account_balance_wallet_outlined,
-                ),
-                const SizedBox(height: 15),
-                _paymentTile(
-                  text,
-                  title: "Wallet",
-                  subtitle: "Balance ₹500",
-                  value: "Wallet",
-                  icon: Icons.wallet_rounded,
-                ),
-              ],
-            ),
+
+          Consumer<BookRideProvider>(
+            builder: (context,provider,_) {
+              return Expanded(
+                child: ListView(
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    children: List.generate(
+                        bookProvider.paymentCouponState.data?.paymentList.length ??
+                            0, (index) {
+                      final data =
+                          bookProvider.paymentCouponState.data?.paymentList[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 5,bottom: 5),
+                        child: _paymentTile(
+                          textTheme,
+                          title: data?.name ?? '',
+                          subtitle: data?.subTitle ?? '',
+                          isSelected: bookProvider.selectedPayment?.id ==
+                              data?.id?.toString(),
+                          iconImage: data?.image ?? '',
+                          ontap: () {
+                            bookProvider.setPayment(
+                                data?.name ?? '', data?.id?.toString() ?? "");
+                          },
+                        ),
+                      );
+                    })
+                    // [
+                    //   _paymentTile(
+                    //     text,
+                    //     title: "Cash",
+                    //     subtitle: "Pay with cash/ Qr code",
+                    //     value: "Cash",
+                    //     icon: Icons.currency_rupee,
+                    //   ),
+                    //   const SizedBox(height: 15),
+                    //   _paymentTile(
+                    //     text,
+                    //     title: "Pay by UPI",
+                    //     subtitle: "Pay using Phonepe, Googlepay",
+                    //     value: "UPI",
+                    //     icon: Icons.account_balance_wallet_outlined,
+                    //   ),
+                    //   const SizedBox(height: 15),
+                    //   _paymentTile(
+                    //     text,
+                    //     title: "Wallet",
+                    //     subtitle: "Balance ₹500",
+                    //     value: "Wallet",
+                    //     icon: Icons.wallet_rounded,
+                    //   ),
+                    // ],
+                    ),
+              );
+            }
           ),
 
           Padding(
@@ -91,7 +119,7 @@ class _ChoosePaymentModeScreenState extends State<ChoosePaymentModeScreen> {
                 child: Center(
                   child: Text(
                     "Confirm",
-                    style: text.titleMedium!.copyWith(
+                    style: textTheme.titleMedium!.copyWith(
                         color: Colors.white, fontFamily: AppFonts.medium),
                   ),
                 ),
@@ -110,13 +138,12 @@ class _ChoosePaymentModeScreenState extends State<ChoosePaymentModeScreen> {
     TextTheme text, {
     required String title,
     required String subtitle,
-    required String value,
-    required IconData icon,
+    required bool isSelected,
+    required String iconImage,
+    required VoidCallback ontap,
   }) {
-    bool isSelected = selected == value;
-
     return GestureDetector(
-      onTap: () => setState(() => selected = value),
+      onTap: ontap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
         decoration: BoxDecoration(
@@ -135,7 +162,16 @@ class _ChoosePaymentModeScreenState extends State<ChoosePaymentModeScreen> {
         ),
         child: Row(
           children: [
-            Icon(icon, color: AppColors.primaryColor, size: 26),
+            Image.network(
+              iconImage,
+              width: 26,
+              height: 26,
+              errorBuilder: (context, error, _) {
+                return const Icon(Icons.currency_rupee,
+                    color: AppColors.primaryColor, size: 26);
+              },
+            ),
+
             const SizedBox(width: 16),
 
             // TEXT

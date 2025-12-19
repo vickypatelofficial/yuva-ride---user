@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:yuva_ride/controller/book_ride_provider.dart';
+import 'package:yuva_ride/utils/globle_func.dart';
 import 'package:yuva_ride/view/custom_widgets/cusotm_back.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_scaffold_utils.dart';
 import 'package:yuva_ride/utils/app_colors.dart';
@@ -9,7 +12,8 @@ class ApplyCouponsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
+    final textTheme = Theme.of(context).textTheme;
+    final bookProvider = context.read<BookRideProvider>();
 
     return CustomScaffold(
       backgroundColor: Colors.white,
@@ -26,7 +30,7 @@ class ApplyCouponsScreen extends StatelessWidget {
                 const SizedBox(width: 12),
                 Text(
                   "Apply Coupons",
-                  style: text.titleMedium!.copyWith(
+                  style: textTheme.titleMedium!.copyWith(
                       color: Colors.white, fontFamily: AppFonts.medium),
                 ),
               ],
@@ -58,7 +62,7 @@ class ApplyCouponsScreen extends StatelessWidget {
                       child: TextField(
                         decoration: InputDecoration(
                           hintText: "Enter Coupons code",
-                          hintStyle: text.bodyMedium,
+                          hintStyle: textTheme.bodyMedium,
                           focusedBorder: InputBorder.none,
                           enabledBorder: InputBorder.none,
                           border: InputBorder.none,
@@ -69,7 +73,7 @@ class ApplyCouponsScreen extends StatelessWidget {
                     ),
                     Text(
                       "Apply",
-                      style: text.titleMedium!.copyWith(
+                      style: textTheme.titleMedium!.copyWith(
                         color: AppColors.primaryColor,
                         fontFamily: AppFonts.medium,
                       ),
@@ -88,12 +92,24 @@ class ApplyCouponsScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text("More Offers",
-                      style: text.titleLarge!
+                      style: textTheme.titleLarge!
                           .copyWith(fontFamily: AppFonts.semiBold)),
                   const SizedBox(height: 16),
                   Column(
-                    children:
-                        List.generate(6, (index) => _couponCard(text, context)),
+                    children: List.generate(
+                        bookProvider
+                                .paymentCouponState.data?.couponList.length ??
+                            0, (index) {
+                      final data = bookProvider
+                          .paymentCouponState.data?.couponList[index];
+                      return _couponCard(textTheme, context, () {
+                        bookProvider.setCoupon(data?.title??'', data?.id?.toString()??"");
+                        Navigator.pop(context);
+                      },
+                          title: data?.title ?? '',
+                          endDate: formatDate2(data?.endDate ?? ''),
+                          discount: data?.discountAmount ?? '');
+                    }),
                   ),
                 ],
               ),
@@ -104,76 +120,77 @@ class ApplyCouponsScreen extends StatelessWidget {
     );
   }
 
-  Widget _couponCard(TextTheme text, BuildContext context) {
+  Widget _couponCard(
+      TextTheme text, BuildContext context, VoidCallback ontapApply,
+      {required String title,
+      required String endDate,
+      required String discount}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: () {
-          Navigator.pop(context);
-        },
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          //
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(.07),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              )
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(1),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xff0F59ED),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        "20% OFF",
-                        style: text.labelLarge!.copyWith(
-                            color: Colors.white, fontFamily: AppFonts.medium),
-                      ),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        //
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(.07),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            )
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(1),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xff0F59ED),
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    const SizedBox(height: 10),
-                    Text(
-                      "On First Ride Booking",
-                      style: text.titleMedium!.copyWith(
-                          fontFamily: AppFonts.medium, color: Colors.black),
+                    child: Text(
+                      "$discount% OFF",
+                      style: text.labelLarge!.copyWith(
+                          color: Colors.white, fontFamily: AppFonts.medium),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      "Valid until 22 March 2025",
-                      style: text.labelMedium!
-                          .copyWith(color: Colors.grey, fontSize: 12),
-                    ),
-                  ],
-                ),
-
-                const Spacer(),
-
-                /// APPLY BUTTON
-                Text(
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    title,
+                    style: text.titleMedium!.copyWith(
+                        fontFamily: AppFonts.medium, color: Colors.black),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "Valid until $endDate", //22 March 2025
+                    style: text.labelMedium!
+                        .copyWith(color: Colors.grey, fontSize: 12),
+                  ),
+                ],
+              ),
+      
+              const Spacer(),
+      
+              /// APPLY BUTTON
+              TextButton(
+                onPressed: ontapApply,
+                child: Text(
                   "Apply",
                   style: text.titleMedium!.copyWith(
                     color: AppColors.primaryColor,
                     fontFamily: AppFonts.medium,
                   ),
-                )
-              ],
-            ),
+                ),
+              )
+            ],
           ),
         ),
       ),

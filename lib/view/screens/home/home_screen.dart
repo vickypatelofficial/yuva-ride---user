@@ -320,7 +320,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Expanded(
       child: CustomInkWell(
         onTap: ontap,
-        height: 106,
+        height: 108,
         padding: const EdgeInsets.all(0),
         elevation: 1,
         decoration: BoxDecoration(

@@ -182,3 +182,10 @@ String formatDate(String dateString) {
 
   return formattedDate;
 }
+
+ 
+
+String formatDate2(String isoDate) {
+  final dateTime = DateTime.parse(isoDate).toLocal();
+  return DateFormat('d MMMM yyyy').format(dateTime);
+}

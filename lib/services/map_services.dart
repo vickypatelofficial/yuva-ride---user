@@ -13,6 +13,7 @@ import 'package:geocoding/geocoding.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:uuid/uuid.dart';
 import 'package:http/http.dart' as http;
+import 'package:yuva_ride/controller/book_ride_provider.dart';
 import 'package:yuva_ride/models/place_suggestion_model.dart';
 import 'package:yuva_ride/utils/app_colors.dart';
 import 'package:yuva_ride/utils/constatns.dart';
@@ -240,19 +241,24 @@ class MapService {
   }
 
   /// 🔹 Convert LatLng → Address
-  Future<String> getAddressFromLatLng(LatLng latLng) async {
+  Future<LocationModel?> getAddressFromLatLng(LatLng latLng) async {
     try {
       List<Placemark> placemarks =
           await placemarkFromCoordinates(latLng.latitude, latLng.longitude);
 
-      if (placemarks.isEmpty) return "Unknown location";
+      if (placemarks.isEmpty)
+        return LocationModel(latLng, '', title: '', subtitle: '');
 
       final p = placemarks.first;
 
-      return "${p.name}, ${p.subLocality}, ${p.locality}, ${p.administrativeArea}, ${p.country}";
+      "${p.name}, ${p.subLocality}, ${p.locality}, ${p.administrativeArea}, ${p.country}";
+      return LocationModel(latLng,
+          "${p.name}, ${p.subLocality}, ${p.locality}, ${p.administrativeArea}, ${p.country}",
+          title: p.locality ?? '', subtitle: p.subLocality ?? '');
     } catch (e) {
-      return "Unable to fetch address";
+      print(e.toString());
     }
+    return null;
   }
 
   final uuid = const Uuid();
@@ -448,5 +454,29 @@ class MapService {
   void clearAll() {
     _markers.clear();
     _polylines.clear();
+  }
+
+ static Future<Map<String, dynamic>> getDistanceAndTime(
+    LatLng origin,
+    LatLng destination,
+  ) async {
+    const apiKey = Constants.mapkey;
+
+    final url = "https://maps.googleapis.com/maps/api/directions/json"
+        "?origin=${origin.latitude},${origin.longitude}"
+        "&destination=${destination.latitude},${destination.longitude}"
+        "&key=$apiKey";
+
+    final response = await http.get(Uri.parse(url));
+    final data = json.decode(response.body);
+
+    if (data['routes'].isEmpty) return {};
+
+    final leg = data['routes'][0]['legs'][0];
+
+    return {
+      "distance_km": leg['distance']['value'] / 1000, // meters → km
+      "duration_min": leg['duration']['value'] / 60, // seconds → min
+    };
   }
 }

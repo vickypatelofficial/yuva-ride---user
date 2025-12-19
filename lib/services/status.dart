@@ -25,3 +25,7 @@ bool isStatusLoading(String status){
 bool isStatusError(String status){
   return ApiStatus.error == status;
 }
+
+bool isStatusLoadingOrError(String status){
+  return (ApiStatus.loading == status)|| (ApiStatus.error == status);
+}

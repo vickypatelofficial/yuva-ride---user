@@ -4,11 +4,11 @@
 
 import 'dart:convert';
 
-HomeModel homeModelFromJson(String str) => HomeModel.fromJson(json.decode(str));
+CategoryModel homeModelFromJson(String str) => CategoryModel.fromJson(json.decode(str));
 
-String homeModelToJson(HomeModel data) => json.encode(data.toJson());
+String homeModelToJson(CategoryModel data) => json.encode(data.toJson());
 
-class HomeModel {
+class CategoryModel {
   int? responseCode;
   bool? result;
   String? message;
@@ -17,7 +17,7 @@ class HomeModel {
   List<CategoryList>? categoryList;
   List<RunnigRide>? runnigRide;
 
-  HomeModel({
+  CategoryModel({
     this.responseCode,
     this.result,
     this.message,
@@ -27,7 +27,7 @@ class HomeModel {
     this.runnigRide,
   });
 
-  factory HomeModel.fromJson(Map<String, dynamic> json) => HomeModel(
+  factory CategoryModel.fromJson(Map<String, dynamic> json) => CategoryModel(
     responseCode: json["ResponseCode"],
     result: json["Result"],
     message: json["message"],
@@ -53,6 +53,7 @@ class CategoryList {
   String? image;
   String? name;
   String? description;
+  String? serviceCategory;
   String? bidding;
   String? role;
 
@@ -62,7 +63,7 @@ class CategoryList {
     this.name,
     this.description,
     this.bidding,
-    this.role,
+    this.role,this.serviceCategory
   });
 
   factory CategoryList.fromJson(Map<String, dynamic> json) => CategoryList(
@@ -70,6 +71,7 @@ class CategoryList {
     image: json["image"],
     name: json["name"],
     description: json["description"],
+    serviceCategory: json["service_category"],
     bidding: json["bidding"],
     role: json["role"],
   );
@@ -81,6 +83,7 @@ class CategoryList {
     "description": description,
     "bidding": bidding,
     "role": role,
+    "service_category":serviceCategory
   };
 }
 

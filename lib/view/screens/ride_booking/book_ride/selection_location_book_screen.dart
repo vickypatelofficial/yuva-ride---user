@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:yuva_ride/controller/book_ride_provider.dart';
-import 'package:yuva_ride/controller/home_provider.dart';
 import 'package:yuva_ride/view/custom_widgets/cusotm_back.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_scaffold_utils.dart';
 import 'package:yuva_ride/main.dart';
 import 'package:yuva_ride/utils/animations.dart';
 import 'package:yuva_ride/utils/app_colors.dart';
 import 'package:yuva_ride/utils/app_fonts.dart';
-import 'package:yuva_ride/view/screens/home/home_screen.dart';
 import 'package:yuva_ride/view/screens/ride_booking/book_ride/book_ride_vehicle_screen.dart';
 
 import 'package:yuva_ride/view/custom_widgets/custom_inkwell.dart';
@@ -290,14 +288,24 @@ class SelectLocationBookScreen extends StatelessWidget {
                                 elevation: 0,
                                 backgroundColor: AppColors.white,
                                 onTap: () {
-                                  Navigator.push(context, AppAnimations.fade(
-                                      SelectLocationMapScreen(
-                                    onSelectLocation:
-                                        (LatLng latLng, String address) {
-                                      bookRideController.setPickupLocation(
-                                          LocationModel(latLng, address));
-                                    },
-                                  )));
+                                  Navigator.push(
+                                      context,
+                                      AppAnimations.fade(
+                                          SelectLocationMapScreen(
+                                        latLng: bookRideController
+                                            .pickupLocation?.latLng,
+                                        onSelectLocation: (LatLng latLng,
+                                            String address,
+                                            String title,
+                                            String subititle) {
+                                          print('++++++========+++++++++');
+                                          print('$address, $title, $subititle');
+                                          bookRideController.setPickupLocation(
+                                              LocationModel(latLng, address,
+                                                  title: title,
+                                                  subtitle: subititle));
+                                        },
+                                      )));
                                 },
                                 child: Row(
                                   children: [
@@ -348,14 +356,22 @@ class SelectLocationBookScreen extends StatelessWidget {
                               const SizedBox(height: 5),
                               CustomInkWell(
                                 onTap: () {
-                                  Navigator.push(context, AppAnimations.fade(
-                                      SelectLocationMapScreen(
-                                    onSelectLocation:
-                                        (LatLng latLng, String address) {
-                                      bookRideController.setDropLocation(
-                                          LocationModel(latLng, address));
-                                    },
-                                  )));
+                                  Navigator.push(
+                                      context,
+                                      AppAnimations.fade(
+                                          SelectLocationMapScreen(
+                                        latLng: bookRideController
+                                            .dropLocation?.latLng,
+                                        onSelectLocation: (LatLng latLng,
+                                            String address,
+                                            String title,
+                                            String subititle) {
+                                          bookRideController.setDropLocation(
+                                              LocationModel(latLng, address,
+                                                  title: title,
+                                                  subtitle: subititle));
+                                        },
+                                      )));
                                 },
                                 child: Row(
                                   children: [
@@ -441,14 +457,14 @@ class SelectLocationBookScreen extends StatelessWidget {
                         bookRideController.pickupLocation == null) {
                       return;
                     }
-                    context.read<HomeProvider>().fetchHOme(
-                        lat: bookRideController.pickupLocation?.latLng.latitude
-                                .toString() ??
-                            "",
-                        long: bookRideController
-                                .pickupLocation?.latLng.longitude
-                                .toString() ??
-                            "");
+                    // context.read<BookRideProvider>().fetchCategory();
+                    final provider =  context.read<BookRideProvider>();
+                    provider.setCategory('taxi');
+                    provider.setVehicle('', '');
+                    provider.changeFareNaviagate(false);
+                    // 2 apis
+                    provider.getCalculatedPrice();
+                    provider.getPaymentCoupon();
                     Navigator.push(context,
                         AppAnimations.fadeSlide(const BookRideVehicleScreen()));
                   },
@@ -457,6 +473,7 @@ class SelectLocationBookScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(30),
                       border:
                           Border.all(color: AppColors.primaryColor, width: 1.5),
+                      // ignore: deprecated_member_use
                       color: AppColors.primaryColor.withOpacity(.1),
                     ),
                     child: Center(
@@ -491,13 +508,6 @@ class SelectLocationBookScreen extends StatelessWidget {
           color: color,
           borderRadius: BorderRadius.circular(50),
           boxShadow: [BoxShadow(color: color, blurRadius: 7)]),
-    );
-  }
-
-  Widget _roundIcon(IconData icon, {bool white = false}) {
-    return CircleAvatar(
-      backgroundColor: Colors.white.withOpacity(.3),
-      child: Icon(icon, color: white ? Colors.white : Colors.black),
     );
   }
 }

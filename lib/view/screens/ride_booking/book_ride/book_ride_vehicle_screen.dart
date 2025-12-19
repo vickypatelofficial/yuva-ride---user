@@ -3,10 +3,12 @@ import 'dart:math';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:yuva_ride/controller/book_ride_provider.dart';
-import 'package:yuva_ride/controller/home_provider.dart';
 import 'package:yuva_ride/main.dart';
+import 'package:yuva_ride/services/local_storage.dart';
 import 'package:yuva_ride/services/map_services.dart';
+import 'package:yuva_ride/services/status.dart';
 import 'package:yuva_ride/utils/constatns.dart';
 import 'package:yuva_ride/view/custom_widgets/cusotm_back.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_button.dart';
@@ -40,10 +42,8 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
   late Animation<double> bounceAnim;
   final MapService mapService = MapService();
 
-  // VEHICLE SELECT
-  String selectedVehicle = "";
   int selectedFare = 60;
-  List<int> fareOptions = [60, 80, 100, 120];
+  List<int> fareOptions = [10, 20, 30, 40];
 
   @override
   void initState() {
@@ -143,7 +143,6 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
   @override
   Widget build(BuildContext context) {
     final bookingProvider = context.read<BookRideProvider>();
-    final homeProvider = context.read<HomeProvider>();
     final text = Theme.of(context).textTheme;
     return CustomScaffold(
       body: Stack(
@@ -199,14 +198,49 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
           ),
 
           /// BOTTOM SHEET
-          AnimatedBuilder(
-            animation: sheetCtrl,
-            builder: (context, child) => Transform.translate(
-              offset: Offset(0, (slideAnim.value * 550) + bounceAnim.value),
-              child: child!,
-            ),
-            child: _bottomSheet(context, text),
-          ),
+          // AnimatedBuilder(
+          //   animation: sheetCtrl,
+          //   builder: (context, child) => Transform.translate(
+          //     offset: Offset(0, (slideAnim.value * 550) + bounceAnim.value),
+          //     child: child!,
+          //   ),
+          //   child: _vehicleBottomSheet(context, text),
+          // ),
+          Consumer<BookRideProvider>(builder: (context, provider, _) {
+            // if (bookingProvider.selectedCategory?.isEmpty ?? true) {
+            //   return AnimatedBuilder(
+            //     animation: sheetCtrl,
+            //     builder: (context, child) => Transform.translate(
+            //       offset: Offset(0, (slideAnim.value * 550) + bounceAnim.value),
+            //       child: child!,
+            //     ),
+            //     child: _categoryBottomSheet(context, text),
+            //   );
+            // } else
+
+            // if (bookingProvider.selectedVehicle == null ||
+            //     bookingProvider.selectedVehicle?.id == null ||
+            //     bookingProvider.selectedVehicle?.id == '')
+            if (!bookingProvider.isFareNavigated) {
+              return AnimatedBuilder(
+                animation: sheetCtrl,
+                builder: (context, child) => Transform.translate(
+                  offset: Offset(0, (slideAnim.value * 550) + bounceAnim.value),
+                  child: child!,
+                ),
+                child: _vehicleBottomSheet(context, text),
+              );
+            } else {
+              return AnimatedBuilder(
+                animation: sheetCtrl,
+                builder: (context, child) => Transform.translate(
+                  offset: Offset(0, (slideAnim.value * 550) + bounceAnim.value),
+                  child: child!,
+                ),
+                child: _fareBottomSheet(context, text),
+              );
+            }
+          }),
         ],
       ),
     );
@@ -215,8 +249,7 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
   // -----------------------------
   // BOTTOM SHEET
   // -----------------------------
-  Widget _bottomSheet(BuildContext context, TextTheme text) {
-    final homeProvider = context.read<HomeProvider>();
+  Widget _vehicleBottomSheet(BuildContext context, TextTheme text) {
     return Align(
       alignment: Alignment.bottomCenter,
       child: Container(
@@ -240,64 +273,42 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
             _locationCard(text),
             const SizedBox(height: 10),
             Expanded(
-              child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 350),
-                  child: SingleChildScrollView(
-                    child: Column(
-                        children: List.generate(
-                            homeProvider.homeState.data?.categoryList?.length ??
-                                0, (index) {
-                      final data =
-                          homeProvider.homeState.data?.categoryList?[index];
-                      return _vehicleItem(
-                        isSelected: selectedVehicle == "Bike",
-                        text,
-                        icon: "assets/images/bike_book.png",
-                        title: data?.name ?? "",
-                        price: "₹45",
-                        cutPrice: "₹65",
-                      );
-                    })
-
-                        // [
-                        //   _vehicleItem(
-                        //     isSelected: selectedVehicle == "Bike",
-                        //     text,
-                        //     icon: "assets/images/bike_book.png",
-                        //     title: "Bike",
-                        //     price: "₹45",
-                        //     cutPrice: "₹65",
-                        //   ),
-                        //   const SizedBox(height: 5),
-                        //   _vehicleItem(
-                        //     text,
-                        //     icon: "assets/images/auto_book.png",
-                        //     title: "Auto",
-                        //     price: "₹45",
-                        //     cutPrice: "₹60",
-                        //     isSelected: selectedVehicle == "Auto",
-                        //   ),
-                        //   const SizedBox(height: 5),
-                        //   _vehicleItem(
-                        //     text,
-                        //     icon: "assets/images/cab_non_ac.png",
-                        //     title: "Cab Non AC",
-                        //     price: "₹45",
-                        //     cutPrice: "₹90",
-                        //     isSelected: selectedVehicle == "Cab Non AC",
-                        //   ),
-                        //   const SizedBox(height: 5),
-                        //   _vehicleItem(
-                        //     text,
-                        //     icon: "assets/images/cab_ac.png",
-                        //     title: "Cab AC",
-                        //     price: "₹45",
-                        //     cutPrice: "₹120",
-                        //     isSelected: selectedVehicle == "Cab AC",
-                        //   ),
-                        // ],
-                        ),
-                  )),
+              child: Consumer<BookRideProvider>(
+                  builder: (context, homeProvider, _) {
+                return AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 350),
+                    child: SingleChildScrollView(
+                      child: isStatusLoadingOrError(
+                              homeProvider.calculateState.status)
+                          ? Column(
+                              children: List.generate(5, (index) {
+                              return vehicleItemShimmer();
+                            }))
+                          : Column(
+                              children: List.generate(
+                                  homeProvider.calculateState.data?.calDriver
+                                          .length ??
+                                      0, (index) {
+                              final data = homeProvider
+                                  .calculateState.data?.calDriver[index];
+                              return _vehicleItem(
+                                ontap: () {
+                                  homeProvider.setVehicle(
+                                      data?.id.toString() ?? '',
+                                      data?.dropPrice.toString() ?? '');
+                                },
+                                isSelected: homeProvider.selectedVehicle?.id ==
+                                    data?.id.toString(),
+                                text,
+                                icon: "assets/images/bike_book.png",
+                                title: data?.name ?? "",
+                                price: "₹${data?.dropPrice.toString() ?? ""}",
+                                cutPrice:
+                                    "₹${data?.dropPrice.toString() ?? ""}",
+                              );
+                            })),
+                    ));
+              }),
             ),
             _paymentBar(text),
             const SizedBox(
@@ -305,8 +316,7 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
             ),
             CustomButton(
               onPressed: () {
-                Navigator.push(
-                    context, AppAnimations.zoomOut(const BookRideFareScreen()));
+                context.read<BookRideProvider>().changeFareNaviagate(true);
               },
               text: "Book a ride",
             ),
@@ -316,82 +326,271 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
     );
   }
 
-  Widget _fareBox(TextTheme text) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text("Choose your amount",
-            style: text.titleMedium!.copyWith(fontWeight: FontWeight.bold)),
-        Text("Pick your amount and pay your fare.",
-            style: text.bodySmall!.copyWith(color: Colors.grey)),
-        const SizedBox(height: 10),
+  Widget _categoryBottomSheet(BuildContext context, TextTheme text) {
+    final bookRideProvider = context.read<BookRideProvider>();
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Container(
+        height: MediaQuery.of(context).size.height * .52,
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          boxShadow: [
+            BoxShadow(
+              // ignore: deprecated_member_use
+              color: Colors.black.withOpacity(.22),
+              blurRadius: 18,
+              offset: const Offset(0, -4),
+            )
+          ],
+        ),
+        child: Column(
+          children: [
+            const SizedBox(height: 10),
 
-        /// FARE OPTIONS
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: fareOptions.map((value) {
-            bool isSelected = value == selectedFare;
-
-            return GestureDetector(
-              onTap: () => setState(() => selectedFare = value),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                // height: 40,
-                width: 70,
-                decoration: BoxDecoration(
-                  color: isSelected ? AppColors.primaryColor : Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color: isSelected
-                          ? AppColors.primaryColor
-                          : Colors.grey.shade300),
-                  boxShadow: [
-                    if (isSelected)
-                      BoxShadow(
-                          color: AppColors.primaryColor.withOpacity(.3),
-                          blurRadius: 10)
-                  ],
-                ),
-                child: Center(
-                  child: Text(
-                    "₹$value",
-                    style: text.titleMedium!.copyWith(
-                      color: isSelected ? Colors.white : Colors.black,
-                    ),
-                  ),
-                ),
+            /// 🔹 GRID VIEW HERE
+            Expanded(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 350),
+                child: Consumer<BookRideProvider>(
+                    builder: (context, homeProvider, _) {
+                  return isStatusLoadingOrError(
+                          homeProvider.categoryState.status)
+                      ? GridView.builder(
+                          itemCount: 9,
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            mainAxisSpacing: 14,
+                            crossAxisSpacing: 14,
+                            childAspectRatio: 0.85,
+                          ),
+                          itemBuilder: (_, __) => categoryGridItemShimmer(),
+                        )
+                      : GridView.builder(
+                          key: const ValueKey("category_grid"),
+                          itemCount: homeProvider
+                                  .categoryState.data?.categoryList?.length ??
+                              0,
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 3,
+                                  mainAxisSpacing: 14,
+                                  crossAxisSpacing: 14,
+                                  childAspectRatio: 0.85),
+                          itemBuilder: (context, index) {
+                            final data = homeProvider
+                                .categoryState.data?.categoryList?[index];
+                            return _categoryGridItem(
+                              text: text,
+                              title: data?.name ?? "",
+                              icon: "assets/images/bike_book.png",
+                              isSelected: false,
+                              onTap: () async {
+                                homeProvider
+                                    .setCategory(data?.serviceCategory ?? '');
+                                homeProvider.getCalculatedPrice();
+                              },
+                            );
+                          },
+                        );
+                }),
               ),
-            );
-          }).toList(),
+            ),
+          ],
         ),
+      ),
+    );
+  }
 
-        const SizedBox(height: 10),
+  Widget _fareBottomSheet(BuildContext context, TextTheme text) {
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Container(
+        height: MediaQuery.of(context).size.height * .52,
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          boxShadow: [
+            BoxShadow(
+              // ignore: deprecated_member_use
+              color: Colors.black.withOpacity(.22),
+              blurRadius: 18,
+              offset: const Offset(0, -4),
+            )
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            _topHandle(),
+            const SizedBox(height: 20),
 
-        _paymentBar(text),
-
-        const SizedBox(height: 10),
-
-        /// BOOK RIDE BUTTON
-        InkWell(
-          onTap: () {
-            Navigator.push(
-                context, AppAnimations.zoomOut(const BookRideFareScreen()));
-          },
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            decoration: BoxDecoration(
-              color: AppColors.primaryColor,
-              borderRadius: BorderRadius.circular(30),
+            Text(
+              "Choose your tip amount",
+              style: text.titleMedium!.copyWith(fontWeight: FontWeight.bold),
             ),
-            child: Center(
-              child: Text("Book a ride",
-                  style: text.titleMedium!.copyWith(
-                      color: Colors.white, fontFamily: AppFonts.medium)),
+
+            const SizedBox(height: 20),
+
+            Text(
+              "Select a tip to appreciate your rider’s service.",
+              style: text.bodySmall!.copyWith(color: Colors.grey),
+              textAlign: TextAlign.center,
             ),
+
+            const SizedBox(height: 30),
+
+            /// FARE OPTIONS
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: fareOptions.map((value) {
+                bool isSelected = value == selectedFare;
+                return GestureDetector(
+                    onTap: () => setState(() => selectedFare = value),
+                    child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        height: 40,
+                        width: 70,
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? AppColors.primaryColor
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                              color: isSelected
+                                  ? AppColors.primaryColor
+                                  : Colors.grey.shade300),
+                          boxShadow: [
+                            if (isSelected)
+                              BoxShadow(
+                                  color: AppColors.primaryColor.withOpacity(.3),
+                                  blurRadius: 10)
+                          ],
+                        ),
+                        child: Center(
+                            child: Text(
+                          "+₹$value",
+                          style: text.titleMedium!.copyWith(
+                            color: isSelected ? Colors.white : Colors.black,
+                          ),
+                        ))));
+              }).toList(),
+            ),
+            const SizedBox(height: 20),
+            _paymentBar(text),
+            const SizedBox(
+              height: 40,
+            ),
+            Consumer<BookRideProvider>(builder: (context, provider, _) {
+              return CustomButton(
+                isLoading: isStatusLoading(provider.rideCreateState.status),
+                onPressed: () async {
+                  await context
+                      .read<BookRideProvider>()
+                      .createRide(tip: selectedFare);
+                  if (isStatusSuccess(provider.rideCreateState.status)) {
+                    // ignore: use_build_context_synchronously
+                    Navigator.push(context,
+                        AppAnimations.zoomOut(const PartnerOnTheWayScreen()));
+                  }
+                },
+                text: "Book a ride",
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Category Item
+  Widget _categoryGridItem({
+    required TextTheme text,
+    required String icon,
+    required String title,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.primaryColor
+                : Colors.black.withOpacity(.05),
+            width: 1,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(.06),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-      ],
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(icon, height: 42),
+            const SizedBox(height: 10),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: text.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 1,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget categoryGridItemShimmer() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade300,
+      highlightColor: Colors.grey.shade100,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          border: Border.all(),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            /// ICON PLACEHOLDER
+            Container(
+              height: 52,
+              width: 52,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            /// TITLE PLACEHOLDER
+            Container(
+              height: 12,
+              width: 60,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(6),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -403,11 +602,12 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
       required String title,
       required String price,
       required bool isSelected,
-      required String cutPrice}) {
+      required String cutPrice,
+      required VoidCallback ontap}) {
     return Padding(
       padding: const EdgeInsets.all(4.0),
       child: CustomInkWell(
-        onTap: () => setState(() => selectedVehicle = title),
+        onTap: ontap,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         elevation: 1,
         decoration: BoxDecoration(
@@ -442,7 +642,7 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
                 Text(price,
                     style: text.titleMedium!
                         .copyWith(fontFamily: AppFonts.medium)),
-                SizedBox(
+                const SizedBox(
                   width: 5,
                 ),
                 Text(cutPrice,
@@ -481,6 +681,86 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
               ),
             )
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget vehicleItemShimmer() {
+    return Padding(
+      padding: const EdgeInsets.all(4.0),
+      child: Shimmer.fromColors(
+        baseColor: Colors.grey.shade300,
+        highlightColor: Colors.grey.shade100,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          decoration: BoxDecoration(
+            // color: Colors.white,
+            border: Border.all(),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              /// ICON
+              Container(
+                height: 38,
+                width: 38,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              const SizedBox(width: 14),
+
+              /// TEXT AREA
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      height: 12,
+                      width: 110,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      height: 16,
+                      width: 110,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              /// PRICE
+              Container(
+                height: 16,
+                width: 80,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+
+              const SizedBox(width: 10),
+
+              /// RADIO
+              Container(
+                height: 20,
+                width: 20,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+              )
+            ],
+          ),
         ),
       ),
     );
@@ -601,7 +881,8 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
           _paymentButton(
             context,
             icon: "assets/images/cash.png",
-            label: "Cash",
+            label: context.read<BookRideProvider>().selectedPayment?.title ??
+                "Cash",
             onTap: () {
               Navigator.push(
                   context, AppAnimations.fade(const ChoosePaymentModeScreen()));
@@ -613,7 +894,8 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
           _paymentButton(
             context,
             icon: "assets/images/offer.png",
-            label: "Offers",
+            label: context.read<BookRideProvider>().selectedCoupon?.title ??
+                "Offers",
             onTap: () {
               Navigator.push(
                   context, AppAnimations.fade(const ApplyCouponsScreen()));

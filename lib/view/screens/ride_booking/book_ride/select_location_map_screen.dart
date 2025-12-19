@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:geolocator/geolocator.dart';
+import 'package:yuva_ride/controller/book_ride_provider.dart';
 import 'package:yuva_ride/main.dart';
 import 'package:yuva_ride/models/place_suggestion_model.dart';
 import 'package:yuva_ride/services/map_services.dart';
@@ -9,8 +9,11 @@ import 'package:yuva_ride/utils/app_colors.dart';
 import 'package:yuva_ride/view/custom_widgets/customTextField.dart';
 
 class SelectLocationMapScreen extends StatefulWidget {
-  const SelectLocationMapScreen({super.key, required this.onSelectLocation});
-  final Function(LatLng data, String address)? onSelectLocation;
+  const SelectLocationMapScreen(
+      {super.key, required this.onSelectLocation, required this.latLng});
+  final LatLng? latLng;
+  final Function(LatLng data, String address, String titile, String subtitle)?
+      onSelectLocation;
 
   @override
   State<SelectLocationMapScreen> createState() =>
@@ -19,21 +22,22 @@ class SelectLocationMapScreen extends StatefulWidget {
 
 class _SelectLocationMapScreenState extends State<SelectLocationMapScreen> {
   final MapService _mapService = MapService();
-  String pickupAddress = "Move map or tap to select location";
+  String pickupAddress = "";
+  String title = "";
+  String subtitle = "";
+  bool isShowAddressCard = true;
 
-  LatLng currentPosition = const LatLng(17.4486, 78.3908);
   LatLng selectedPosition = const LatLng(17.4486, 78.3908);
 
   final Completer<GoogleMapController> _controller = Completer();
-  bool isLoading = true;
+  // bool isLoading = true;
 
   List<PlaceSuggestion> suggestions = [];
 
   Set<Marker> markers = {};
 
   final TextEditingController textEditingController = TextEditingController();
-
-  bool isShowAddressCard = false;
+  final FocusNode _focusNode = FocusNode();
 
   @override
   void initState() {
@@ -42,21 +46,46 @@ class _SelectLocationMapScreenState extends State<SelectLocationMapScreen> {
   }
 
   Future<void> _loadCurrentLocation() async {
-    LatLng? latLng = await _mapService.getCurrentLatLng();
+    LatLng? latLng;
+    if (widget.latLng == null) {
+      latLng = await _mapService.getCurrentLatLng();
+    } else {
+      latLng = widget.latLng;
+    }
 
     if (latLng != null && mounted) {
-      String address = await _mapService.getAddressFromLatLng(latLng);
+      LocationModel? location = await _mapService.getAddressFromLatLng(latLng);
       setState(() {
-        currentPosition = latLng;
-        selectedPosition = latLng;
-        isLoading = false;
-        pickupAddress = address;
+        selectedPosition = latLng!;
+        pickupAddress = location?.address ?? "";
+        title = location?.title ?? "";
+        subtitle = location?.subtitle ?? "";
+      });
+    }
+
+    // Move camera to tapped position
+    await _mapService.moveCamera(selectedPosition);
+
+    // Update marker
+    markers.clear();
+    markers.add(_mapService.buildSelectedMarker(selectedPosition));
+
+    // Get address
+    LocationModel? location =
+        await _mapService.getAddressFromLatLng(selectedPosition);
+
+    if (mounted) {
+      setState(() {
+        selectedPosition = latLng!;
+        pickupAddress = location?.address ?? "";
+        title = location?.title ?? "";
+        subtitle = location?.subtitle ?? "";
       });
     }
 
     final controller = await _controller.future;
     _mapService.initController(controller);
-    _mapService.moveCamera(currentPosition);
+    _mapService.moveCamera(selectedPosition);
   }
 
   @override
@@ -70,7 +99,7 @@ class _SelectLocationMapScreenState extends State<SelectLocationMapScreen> {
           // if (!isLoading)
           GoogleMap(
             initialCameraPosition:
-                CameraPosition(target: currentPosition, zoom: 15),
+                CameraPosition(target: selectedPosition, zoom: 15),
             myLocationEnabled: true,
             zoomControlsEnabled: false,
             onMapCreated: (controller) {
@@ -88,11 +117,15 @@ class _SelectLocationMapScreenState extends State<SelectLocationMapScreen> {
               markers.add(_mapService.buildSelectedMarker(latLng));
 
               // Get address
-              String address = await _mapService.getAddressFromLatLng(latLng);
+              LocationModel? location =
+                  await _mapService.getAddressFromLatLng(latLng);
 
               if (mounted) {
                 setState(() {
-                  pickupAddress = address;
+                  selectedPosition = latLng;
+                  pickupAddress = location?.address ?? "";
+                  title = location?.title ?? "";
+                  subtitle = location?.subtitle ?? "";
                 });
               }
             },
@@ -126,6 +159,7 @@ class _SelectLocationMapScreenState extends State<SelectLocationMapScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 CustomTextField(
+                  focusNode: _focusNode,
                   hint: 'Search location',
                   borderRadius: 28,
                   controller: textEditingController,
@@ -147,53 +181,70 @@ class _SelectLocationMapScreenState extends State<SelectLocationMapScreen> {
                     });
                   },
                 ),
-                const SizedBox(height: 0),
-                if (textEditingController.text.isNotEmpty)
-                  SizedBox(
+                const SizedBox(height: 10),
+                if (textEditingController.text.isNotEmpty &&
+                    suggestions.isNotEmpty)
+                  Container(
+                    decoration: BoxDecoration(
+                        color: AppColors.white,
+                        border: Border.all(width: 1, color: AppColors.grey),
+                        borderRadius: BorderRadius.circular(8)),
                     height: screenHeight * .35,
                     child: ListView.builder(
                       itemCount: suggestions.length,
                       itemBuilder: (context, index) {
                         final item = suggestions[index];
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Column(
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                    color: AppColors.white,
+                                    borderRadius: BorderRadius.circular(12)),
+                                child: ListTile(
+                                  leading: const Icon(Icons.location_on),
+                                  title: Text(item.description),
+                                  onTap: () async {
+                                    // Get LatLng from placeId
+                                    LatLng? latLng = await _mapService
+                                        .getLatLngFromPlaceId(item.placeId);
 
-                        return Container(
-                          decoration: BoxDecoration(
-                              color: AppColors.white,
-                              borderRadius: BorderRadius.circular(12)),
-                          child: ListTile(
-                            leading: const Icon(Icons.location_on),
-                            title: Text(item.description),
-                            onTap: () async {
-                              // Get LatLng from placeId
-                              LatLng? latLng = await _mapService
-                                  .getLatLngFromPlaceId(item.placeId);
+                                    if (latLng == null) return;
 
-                              if (latLng == null) return;
+                                    // Move map camera
+                                    await _mapService.moveCamera(latLng);
 
-                              // Move map camera
-                              await _mapService.moveCamera(latLng);
+                                    //  Update marker
+                                    markers.clear();
+                                    markers.add(_mapService
+                                        .buildSelectedMarker(latLng));
 
-                              //  Update marker
-                              markers.clear();
-                              markers
-                                  .add(_mapService.buildSelectedMarker(latLng));
+                                    //  Get full address
+                                    LocationModel? location = await _mapService
+                                        .getAddressFromLatLng(latLng);
+                                    _focusNode.unfocus();
+                                    if (mounted) {
+                                      setState(() {
+                                        selectedPosition = latLng;
+                                        pickupAddress = location?.address ?? "";
+                                        title = location?.title ?? "";
+                                        subtitle = location?.subtitle ?? "";
 
-                              //  Get full address
-                              String address = await _mapService
-                                  .getAddressFromLatLng(latLng);
-                              if (mounted) {
-                                setState(() {
-                                  selectedPosition = latLng;
-                                  pickupAddress = address;
-                                  isShowAddressCard = true;
-                                  suggestions.clear(); // hide list
-                                  textEditingController.text = item.description;
-                                });
-                              }
+                                        isShowAddressCard = true;
+                                        suggestions.clear(); // hide list
+                                        textEditingController.text =
+                                            item.description;
+                                      });
+                                    }
 
-                              // 6️⃣ Reset session
-                              _mapService.resetSessionToken();
-                            },
+                                    // 6️⃣ Reset session
+                                    _mapService.resetSessionToken();
+                                  },
+                                ),
+                              ),
+                              Divider()
+                            ],
                           ),
                         );
                       },
@@ -232,33 +283,35 @@ class _SelectLocationMapScreenState extends State<SelectLocationMapScreen> {
               ),
             ),
 
-          // ✅ Save
-          Positioned(
-            left: 18,
-            right: 18,
-            bottom: 40,
-            child: GestureDetector(
-              onTap: () {
-                widget.onSelectLocation!(selectedPosition, pickupAddress);
-                Navigator.pop(context, selectedPosition);
-              },
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 26, vertical: 16),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryColor,
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: Center(
-                  child: Text(
-                    "Select",
-                    style: text.titleMedium!.copyWith(
-                        color: Colors.white, fontWeight: FontWeight.bold),
+          // ✅ select
+          if ((suggestions.isEmpty) && isShowAddressCard)
+            Positioned(
+              left: 18,
+              right: 18,
+              bottom: 40,
+              child: GestureDetector(
+                onTap: () {
+                  widget.onSelectLocation!(
+                      selectedPosition, pickupAddress, title, subtitle);
+                  Navigator.pop(context);
+                },
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 26, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryColor,
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: Center(
+                    child: Text(
+                      "Select",
+                      style: text.titleMedium!.copyWith(
+                          color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
 
           // ---------------- BACK BUTTON ----------------
           Positioned(
