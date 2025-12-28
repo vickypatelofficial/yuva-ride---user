@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
-import 'package:yuva_ride/controller/book_ride_provider.dart';
+import 'package:yuva_ride/provider/book_ride_provider.dart';
 import 'package:yuva_ride/view/custom_widgets/cusotm_back.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_scaffold_utils.dart';
 import 'package:yuva_ride/main.dart';
@@ -458,9 +458,10 @@ class SelectLocationBookScreen extends StatelessWidget {
                       return;
                     }
                     // context.read<BookRideProvider>().fetchCategory();
-                    final provider =  context.read<BookRideProvider>();
+                    final provider = context.read<BookRideProvider>();
                     provider.setCategory('taxi');
                     provider.setVehicle('', '');
+                    provider.setCoupon('', '');
                     provider.changeFareNaviagate(false);
                     // 2 apis
                     provider.getCalculatedPrice();

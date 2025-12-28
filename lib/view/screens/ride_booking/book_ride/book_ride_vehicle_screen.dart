@@ -1,16 +1,17 @@
 import 'dart:math';
 
 import 'package:auto_size_text/auto_size_text.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:yuva_ride/controller/book_ride_provider.dart';
+import 'package:yuva_ride/provider/book_ride_provider.dart';
 import 'package:yuva_ride/main.dart';
-import 'package:yuva_ride/services/local_storage.dart';
 import 'package:yuva_ride/services/map_services.dart';
 import 'package:yuva_ride/services/status.dart';
 import 'package:yuva_ride/utils/constatns.dart';
 import 'package:yuva_ride/view/custom_widgets/cusotm_back.dart';
+import 'package:yuva_ride/view/custom_widgets/cusotm_radio_container.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_button.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_inkwell.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_scaffold_utils.dart';
@@ -19,7 +20,7 @@ import 'package:yuva_ride/utils/animations.dart';
 import 'package:yuva_ride/utils/app_colors.dart';
 import 'package:yuva_ride/utils/app_fonts.dart';
 import 'package:yuva_ride/view/screens/ride_booking/after_booking/partener_on_the_way_screen.dart';
-import 'package:yuva_ride/view/screens/ride_booking/book_ride/book_ride_fare_screen.dart';
+import 'package:yuva_ride/view/screens/ride_booking/book_ride/choose_contact_screen.dart';
 import 'package:yuva_ride/view/screens/ride_booking/book_ride/choose_payment_screen.dart';
 import 'package:yuva_ride/view/screens/ride_booking/book_ride/offer_selection_screen.dart';
 
@@ -64,10 +65,10 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
     bounceAnim = Tween<double>(begin: 25, end: 0).animate(
       CurvedAnimation(parent: sheetCtrl, curve: Curves.elasticOut),
     );
-
     Future.delayed(const Duration(milliseconds: 300), () {
       sheetCtrl.forward();
     });
+    context.read<BookRideProvider>().init();
   }
 
   Future<BitmapDescriptor> getResizedMarker(String path, int width) async {
@@ -100,7 +101,7 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
     final points = await mapService.getRoutePolyline(
       pickupLatLng,
       dropLatLng,
-      Constants.mapkey,
+      Constants.mapkey
     );
 
     if (points.isNotEmpty) {
@@ -274,37 +275,42 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
             const SizedBox(height: 10),
             Expanded(
               child: Consumer<BookRideProvider>(
-                  builder: (context, homeProvider, _) {
+                  builder: (context, bookProvider, _) {
                 return AnimatedSwitcher(
                     duration: const Duration(milliseconds: 350),
                     child: SingleChildScrollView(
                       child: isStatusLoadingOrError(
-                              homeProvider.calculateState.status)
+                              bookProvider.calculateState.status)
                           ? Column(
                               children: List.generate(5, (index) {
                               return vehicleItemShimmer();
                             }))
                           : Column(
                               children: List.generate(
-                                  homeProvider.calculateState.data?.calDriver
+                                  bookProvider.calculateState.data?.calDriver
                                           .length ??
                                       0, (index) {
-                              final data = homeProvider
+                              final data = bookProvider
                                   .calculateState.data?.calDriver[index];
                               return _vehicleItem(
                                 ontap: () {
-                                  homeProvider.setVehicle(
+                                  bookProvider.setVehicle(
                                       data?.id.toString() ?? '',
                                       data?.dropPrice.toString() ?? '');
+                                      bookProvider.assignDriverId(data?.drivers);
+                                      if (kDebugMode) {
+                                        print(data?.drivers);
+                                      }
                                 },
-                                isSelected: homeProvider.selectedVehicle?.id ==
+                                isSelected: bookProvider.selectedVehicle?.id ==
                                     data?.id.toString(),
                                 text,
                                 icon: "assets/images/bike_book.png",
                                 title: data?.name ?? "",
-                                price: "₹${data?.dropPrice.toString() ?? ""}",
-                                cutPrice:
-                                    "₹${data?.dropPrice.toString() ?? ""}",
+                                price: "₹${data?.finalPrice.toString() ?? ""}",
+                                cutPrice: data?.discount != null
+                                    ? "₹${data?.discount?.amount ?? ""}"
+                                    : null,
                               );
                             })),
                     ));
@@ -602,7 +608,7 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
       required String title,
       required String price,
       required bool isSelected,
-      required String cutPrice,
+      String? cutPrice,
       required VoidCallback ontap}) {
     return Padding(
       padding: const EdgeInsets.all(4.0),
@@ -645,9 +651,10 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
                 const SizedBox(
                   width: 5,
                 ),
-                Text(cutPrice,
-                    style: text.bodySmall!
-                        .copyWith(decoration: TextDecoration.lineThrough)),
+                if (cutPrice != null)
+                  Text(cutPrice,
+                      style: text.bodySmall!
+                          .copyWith(decoration: TextDecoration.lineThrough)),
               ],
             ),
             const SizedBox(width: 10),
@@ -894,8 +901,15 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
           _paymentButton(
             context,
             icon: "assets/images/offer.png",
-            label: context.read<BookRideProvider>().selectedCoupon?.title ??
-                "Offers",
+            label: (context.read<BookRideProvider>().selectedCoupon?.title !=
+                        null) &&
+                    (context
+                        .read<BookRideProvider>()
+                        .selectedCoupon!
+                        .title
+                        .isNotEmpty)
+                ? context.read<BookRideProvider>().selectedCoupon?.title ?? ''
+                : "Offers",
             onTap: () {
               Navigator.push(
                   context, AppAnimations.fade(const ApplyCouponsScreen()));
@@ -907,7 +921,13 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
           _paymentButton(
             context,
             icon: "assets/images/user.png",
-            label: "My Self",
+            label: ((context.read<BookRideProvider>().selectedContact?.isSelf ==
+                        null) ||
+                    (context.read<BookRideProvider>().selectedContact?.isSelf ??
+                        true))
+                ? "My Self"
+                : context.read<BookRideProvider>().selectedContact?.name ??
+                    "My Self",
             onTap: () {
               _showRideForSomeoneSheet(context);
             },
@@ -1001,7 +1021,6 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
 
 void _showRideForSomeoneSheet(BuildContext context) {
   final text = Theme.of(context).textTheme;
-
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -1013,146 +1032,179 @@ void _showRideForSomeoneSheet(BuildContext context) {
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            /// CLOSE BUTTON
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "Book a Ride for Someone Else",
-                  style: text.titleLarge!.copyWith(
-                    fontWeight: FontWeight.bold,
+        child: Consumer<BookRideProvider>(builder: (context, provider, _) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              /// CLOSE BUTTON
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Book a Ride for Someone Else",
+                    style: text.titleLarge!.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
+                  InkWell(
+                    onTap: () => Navigator.pop(context),
+                    child: const CircleAvatar(
+                      radius: 16,
+                      backgroundColor: Colors.black12,
+                      child: Icon(Icons.close, size: 18, color: Colors.black),
+                    ),
+                  )
+                ],
+              ),
+
+              const SizedBox(height: 4),
+
+              Text(
+                "Booking for someone made simple.",
+                style: text.bodyMedium!.copyWith(
+                  color: Colors.black54,
                 ),
-                InkWell(
-                  onTap: () => Navigator.pop(context),
-                  child: const CircleAvatar(
-                    radius: 16,
-                    backgroundColor: Colors.black12,
-                    child: Icon(Icons.close, size: 18, color: Colors.black),
+              ),
+
+              const SizedBox(height: 20),
+
+              /// TITLE: WHO’S TAKING THE RIDE?
+              Text(
+                "Who's Taking the Ride?",
+                style: text.bodyLarge!.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              const SizedBox(height: 15),
+
+              /// OPTION 1 — MY SELF
+              Row(
+                children: [
+                  CustomRadioContainer(
+                    isSelected: provider.selectedContact?.isSelf == true,
+                    onTap: () {
+                      provider.selectContact(isSelf: true);
+                    },
                   ),
-                )
-              ],
-            ),
-
-            const SizedBox(height: 4),
-
-            Text(
-              "Booking for someone made simple.",
-              style: text.bodyMedium!.copyWith(
-                color: Colors.black54,
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            /// TITLE: WHO’S TAKING THE RIDE?
-            Text(
-              "Who's Taking the Ride?",
-              style: text.bodyLarge!.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-            const SizedBox(height: 15),
-
-            /// OPTION 1 — MY SELF
-            Row(
-              children: [
-                Radio(
-                  value: "self",
-                  groupValue: "self",
-                  onChanged: (_) {},
-                  activeColor: AppColors.primaryColor,
-                ),
-                Icon(Icons.person_outlined),
-                SizedBox(
-                  width: 10,
-                ),
-                Text(
-                  "My Self",
-                  style: text.bodyLarge,
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 10),
-
-            Row(
-              children: [
-                Radio(
-                  value: "other",
-                  // ignore: deprecated_member_use
-                  groupValue: "self",
-                  // ignore: deprecated_member_use
-                  onChanged: (_) {},
-                  activeColor: AppColors.primaryColor,
-                ),
-                const Icon(Icons.person_outlined),
-                const SizedBox(
-                  width: 10,
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("Mukesh", style: text.bodyLarge),
-                    Text(
-                      "+91 76456 58566",
-                      style: text.bodySmall,
-                    )
-                  ],
-                )
-              ],
-            ),
-
-            const SizedBox(height: 10),
-
-            /// OPTION 3 — CHOOSE ANOTHER CONTACT
-            Row(
-              children: [
-                const Icon(Icons.contacts, color: Colors.black54),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    "Choose another contact",
+                  const SizedBox(
+                    width: 10,
+                  ),
+                  const Icon(Icons.person_outlined),
+                  const SizedBox(
+                    width: 10,
+                  ),
+                  Text(
+                    "My Self",
                     style: text.bodyLarge,
                   ),
+                ],
+              ),
+
+              const SizedBox(height: 10),
+              Consumer<BookRideProvider>(builder: (context, provider, _) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: List.generate(
+                      (provider.contactState.data?.length ?? 0) > 0 ? 1 : 0,
+                      (index) {
+                    final contact = provider.contactState.data?[index];
+                    return Row(
+                      children: [
+                        CustomRadioContainer(
+                          isSelected:
+                              !(provider.selectedContact?.isSelf ?? true),
+                          onTap: () {
+                            provider.selectContact(
+                              isSelf: false,
+                              phone: contact?.phone,
+                              name: contact?.name,
+                              id: contact?.id,
+                              cId: contact?.cId,
+                              countryCode: contact?.countryCode,
+                            );
+                          },
+                        ),
+                        const SizedBox(
+                          width: 10,
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(Icons.person_outlined),
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(contact?.name ?? '', style: text.bodyLarge),
+                            Text(
+                              contact?.phone ?? '',
+                              style: text.bodySmall,
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                  }),
+                );
+              }),
+
+              const SizedBox(height: 10),
+
+              /// OPTION 3 — CHOOSE ANOTHER CONTACT
+              InkWell(
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                      context,
+                      AppAnimations.fadeSlide(
+                          const ChooseSavedContactScreen()));
+                },
+                child: Row(
+                  children: [
+                    const Icon(Icons.contacts, color: Colors.black54),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        "Choose another contact",
+                        style: text.bodyLarge,
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios,
+                        color: Colors.black54, size: 18)
+                  ],
                 ),
-                const Icon(Icons.arrow_forward_ios,
-                    color: Colors.black54, size: 18)
-              ],
-            ),
+              ),
 
-            const SizedBox(height: 18),
+              const SizedBox(height: 18),
 
-            /// SAVE BUTTON
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryColor,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(25),
+              /// SAVE BUTTON
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-                onPressed: () {},
-                child: Text(
-                  "Save",
-                  style: text.titleMedium!.copyWith(
-                    color: Colors.white,
-                    fontFamily: AppFonts.semiBold,
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: Text(
+                    "Save",
+                    style: text.titleMedium!.copyWith(
+                      color: Colors.white,
+                      fontFamily: AppFonts.semiBold,
+                    ),
                   ),
                 ),
               ),
-            ),
 
-            const SizedBox(height: 12),
-          ],
-        ),
+              const SizedBox(height: 12),
+            ],
+          );
+        }),
       );
     },
   );

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:yuva_ride/controller/auth_provider.dart';
-import 'package:yuva_ride/controller/book_ride_provider.dart';
+import 'package:yuva_ride/provider/auth_provider.dart';
+import 'package:yuva_ride/provider/book_ride_provider.dart'; 
 import 'package:yuva_ride/utils/theme.dart';
 import 'package:yuva_ride/view/splash_screen.dart';
 
@@ -22,7 +22,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => BookRideProvider()),
-        ChangeNotifierProvider(create: (_) => BookRideProvider()),
+        ChangeNotifierProvider(create: (_) => BookRideProvider()), 
       ],
       child: MaterialApp(
           theme: RAppTheme.lightTheme,

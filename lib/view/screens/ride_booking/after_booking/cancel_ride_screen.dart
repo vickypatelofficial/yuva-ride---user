@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:yuva_ride/provider/book_ride_provider.dart';
+import 'package:yuva_ride/services/status.dart';
+import 'package:yuva_ride/utils/animations.dart';
 import 'package:yuva_ride/view/custom_widgets/cusotm_back.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_inkwell.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_scaffold_utils.dart';
 import 'package:yuva_ride/utils/app_colors.dart';
 import 'package:yuva_ride/utils/app_fonts.dart';
+import 'package:yuva_ride/view/screens/home/home_screen.dart';
 
 class CancelRideReasonScreen extends StatefulWidget {
   const CancelRideReasonScreen({super.key});
@@ -89,30 +94,57 @@ class _CancelRideReasonScreenState extends State<CancelRideReasonScreen> {
             ),
           ),
           const SizedBox(height: 20),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18),
-            child: CustomInkWell(
-              onTap: () {
-                Navigator.pop(context);
-              },
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: AppColors.primaryColor,
-                borderRadius: BorderRadius.circular(30),
-              ),
-              child: Center(
-                child: Text(
-                  "Confirm",
-                  style: text.titleMedium!.copyWith(
-                    color: Colors.white,
-                    fontFamily: AppFonts.medium,
-                    fontSize: 16,
-                  ),
+          Consumer<BookRideProvider>(
+              builder: (context, bookRideProvider, child) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: CustomInkWell(
+                onTap: ()async {
+                 await bookRideProvider.cancelRide(
+                      cancelId: '3',
+                      requestId: bookRideProvider.getActiveRideRequestId(),
+                      lat: bookRideProvider.pickupLocation?.latLng.latitude
+                              .toString() ??
+                          '',
+                      lng: bookRideProvider.pickupLocation?.latLng.longitude
+                              .toString() ??
+                          '');
+                  if (isStatusSuccess(
+                      bookRideProvider.cancelRideState.status)) {
+                    Navigator.pushAndRemoveUntil(
+                        // ignore: use_build_context_synchronously
+                        context,
+                        AppAnimations.slideBottomToTop(const HomeScreen()),
+                        (_) => false);
+                  }
+                },
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryColor,
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: Center(
+                  child:
+                      isStatusLoading(bookRideProvider.cancelRideState.status)
+                          ? const SizedBox(
+                              height: 25,
+                              width: 25,
+                              child: CircularProgressIndicator(
+                                color: AppColors.white,
+                              ))
+                          : Text(
+                              "Confirm",
+                              style: text.titleMedium!.copyWith(
+                                color: Colors.white,
+                                fontFamily: AppFonts.medium,
+                                fontSize: 16,
+                              ),
+                            ),
                 ),
               ),
-            ),
-          ),
+            );
+          }),
           const SizedBox(height: 20),
         ],
       ),

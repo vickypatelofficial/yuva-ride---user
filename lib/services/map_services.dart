@@ -9,12 +9,9 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:geocoding/geocoding.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:uuid/uuid.dart';
-import 'package:http/http.dart' as http;
-import 'package:yuva_ride/controller/book_ride_provider.dart';
 import 'package:yuva_ride/models/place_suggestion_model.dart';
+import 'package:yuva_ride/provider/book_ride_provider.dart';
 import 'package:yuva_ride/utils/app_colors.dart';
 import 'package:yuva_ride/utils/constatns.dart';
 
@@ -246,8 +243,9 @@ class MapService {
       List<Placemark> placemarks =
           await placemarkFromCoordinates(latLng.latitude, latLng.longitude);
 
-      if (placemarks.isEmpty)
+      if (placemarks.isEmpty) {
         return LocationModel(latLng, '', title: '', subtitle: '');
+      }
 
       final p = placemarks.first;
 
@@ -375,6 +373,7 @@ class MapService {
             .buffer
             .asUint8List();
 
+    // ignore: deprecated_member_use
     return BitmapDescriptor.fromBytes(resizedBytes);
   }
 

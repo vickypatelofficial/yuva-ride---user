@@ -16,7 +16,6 @@ import 'package:yuva_ride/view/screens/home/navbar/navbar_screen.dart';
 import 'dart:ui' as ui;
 
 import 'package:yuva_ride/view/screens/ride_booking/book_ride/selection_location_book_screen.dart';
-import 'package:yuva_ride/view/screens/ride_sharing/ride_sharing_history/ride_sharing_history_screen.dart';
 import 'package:yuva_ride/view/screens/ride_sharing/share_ride/selection_location_share_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -32,8 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void initState() {
-    super.initState();
-
+    super.initState(); 
     mapService.loadVehicleMarkers().then((value) {
       setState(() => markers = value);
     });

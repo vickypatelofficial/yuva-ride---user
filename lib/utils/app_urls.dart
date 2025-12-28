@@ -27,6 +27,15 @@ class AppUrl {
 
   static const String couponPayment = '${baseUrl}coupon_payment';
 
+  static const String getSavedContacts = '${baseUrl}get_saved_contacts';
+  static const String addSavedContact = '${baseUrl}add_saved_contact';
+  static const String deleteSavedContact = '${baseUrl}delete_saved_contact';
+  static const String driverProfileDetail = '${baseUrl}driver_profile_detail';
+  static const String cancelRide = '${baseUrl}vehicle_ride_cancel'; 
+  
+  static const String socketUrl =
+      'https://yuvaride.techlanditsolutions.com';
+
 // static const String url = '${baseUrl}url';
 // static const String url = '${baseUrl}url';
 // static const String url = '${baseUrl}url';

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:yuva_ride/controller/book_ride_provider.dart';
+import 'package:yuva_ride/provider/book_ride_provider.dart';
 import 'package:yuva_ride/utils/globle_func.dart';
 import 'package:yuva_ride/view/custom_widgets/cusotm_back.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_scaffold_utils.dart';
@@ -103,7 +103,9 @@ class ApplyCouponsScreen extends StatelessWidget {
                       final data = bookProvider
                           .paymentCouponState.data?.couponList[index];
                       return _couponCard(textTheme, context, () {
-                        bookProvider.setCoupon(data?.title??'', data?.id?.toString()??"");
+                        bookProvider.setCoupon(
+                            data?.title ?? '', data?.id?.toString() ?? "");
+                        bookProvider.getCalculatedPrice();
                         Navigator.pop(context);
                       },
                           title: data?.title ?? '',
@@ -135,6 +137,7 @@ class ApplyCouponsScreen extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
+              // ignore: deprecated_member_use
               color: Colors.black.withOpacity(.07),
               blurRadius: 8,
               offset: const Offset(0, 4),
@@ -150,8 +153,8 @@ class ApplyCouponsScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
                       color: const Color(0xff0F59ED),
                       borderRadius: BorderRadius.circular(20),
@@ -176,9 +179,9 @@ class ApplyCouponsScreen extends StatelessWidget {
                   ),
                 ],
               ),
-      
+
               const Spacer(),
-      
+
               /// APPLY BUTTON
               TextButton(
                 onPressed: ontapApply,

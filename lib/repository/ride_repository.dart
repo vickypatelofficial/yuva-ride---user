@@ -1,17 +1,20 @@
+import 'package:yuva_ride/models/driver_profile_model.dart';
 import 'package:yuva_ride/models/home/available_driver_model.dart';
 import 'package:yuva_ride/models/home/calculator_price_model.dart';
+import 'package:yuva_ride/models/home/contact_model.dart';
 import 'package:yuva_ride/models/home/home_model.dart';
 import 'package:yuva_ride/models/home/payment_coupon_model.dart';
 import 'package:yuva_ride/services/api_services.dart';
 import 'package:yuva_ride/services/status.dart';
 import 'package:yuva_ride/utils/app_urls.dart';
+import 'package:yuva_ride/utils/globle_func.dart';
 
 class RideRepository {
   final ApiService _api = ApiService();
 
   Future<ApiResponse> createRide({
     required String uid,
-    required List<int> driverIds,
+    required List driverIds,
     required String vehicleId,
     required String price,
     required String totalKm,
@@ -28,6 +31,9 @@ class RideRepository {
     String couponId = "",
     String bidAutoStatus = "0",
     String droplist = "",
+    String? bookFor,
+    String? otherName,
+    String? otherPhone,
     List<Map<String, String>> droplistAdd = const [],
   }) async {
     final body = {
@@ -50,6 +56,9 @@ class RideRepository {
       "droplistadd": droplistAdd,
       "tip": tip,
       "service_category": serviceCategory,
+      "book_for": bookFor ?? 'my_self',
+      if (otherName != null) "other_name": otherName,
+      if (otherPhone != null) "other_phone": otherPhone
     };
 
     final response = await _api.post(AppUrl.addVehicleRequest, body);
@@ -78,6 +87,7 @@ class RideRepository {
     required String dropLatLon,
     required List dropLatLonList,
     required String serviceCategory,
+    String? couponId,
   }) async {
     final body = {
       "uid": uid,
@@ -87,6 +97,7 @@ class RideRepository {
       "pickup_lat_lon": pickupLatLon,
       "drop_lat_lon": dropLatLon,
       "drop_lat_lon_list": dropLatLonList,
+      if (couponId != null) "coupon_id": couponId,
     };
 
     final response = await _api.post(AppUrl.calculate, body);
@@ -124,14 +135,92 @@ class RideRepository {
         : ApiResponse.error(response.message);
   }
 
-    Future<ApiResponse<PaymentCouponModel>> getPaymentCoupon() async {
-    final ApiResponse response =
-        await _api.get(AppUrl.couponPayment);
+  Future<ApiResponse<PaymentCouponModel>> getPaymentCoupon() async {
+    final ApiResponse response = await _api.get(AppUrl.couponPayment);
     if (isStatusSuccess(response.status)) {
       return ApiResponse.success(PaymentCouponModel.fromJson(response.data));
     } else {
       return ApiResponse.error(response.message);
     }
   }
+
+  Future<ApiResponse<List<SavedContactModel>>> getContacts(
+      {required String uid}) async {
+    final response = await _api.post(AppUrl.getSavedContacts, {"uid": uid});
+
+    if (isStatusSuccess(response.status)) {
+      final list = (response.data['contacts'] as List? ?? [])
+          .map((e) => SavedContactModel.fromJson(e))
+          .toList();
+      print('+++++++++++++++');
+      print(list.length);
+      return ApiResponse.success(list);
+    }
+    return ApiResponse.error(response.message);
+  }
+
+  /// 🔹 ADD CONTACT
+  Future<ApiResponse> addContact({
+    required String uid,
+    required String name,
+    required String phone,
+    required String countryCode,
+  }) async {
+    final body = {
+      "uid": uid,
+      "name": name,
+      "phone": phone,
+      "country_code": countryCode,
+    };
+
+    return await _api.post(AppUrl.addSavedContact, body);
+  }
+
+  /// 🔹 DELETE CONTACT
+  Future<ApiResponse> deleteContact({
+    required String uid,
+    required String contactId,
+  }) async {
+    return await _api.post(
+      AppUrl.deleteSavedContact,
+      {"uid": uid, "contact_id": contactId},
+    );
+  }
+
+  /// 🔹 Driver Profile 
+  Future<ApiResponse<DriverProfileModel>> getDriverProfile({
+    required String driverId,
+  }) async {
+    final response = await _api.post(
+      AppUrl.driverProfileDetail,
+      {"d_id": driverId},
+    );
+    if (isStatusSuccess(response.status)) {
+      return ApiResponse.success(DriverProfileModel.fromJson(response.data));
+    } else {
+      return ApiResponse.error(response.message);
+    }
+  }
+
+  /// 🔹 Cancel Ride
+  Future<ApiResponse> cancelRide({
+    required String userId,
+    required String cancelId,
+    required String requestId,
+    required String lat,
+    required String lng,
+  }) async {
+    return await _api.post(
+      AppUrl.cancelRide,
+      {
+        "uid": userId,
+        "request_id": requestId,
+        "cancel_id": cancelId,
+        "lat": lat,
+        "lon": lng
+      },
+    );
+  }
+
 
 }

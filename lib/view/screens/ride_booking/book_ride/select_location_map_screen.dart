@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:yuva_ride/controller/book_ride_provider.dart';
+import 'package:yuva_ride/provider/book_ride_provider.dart';
 import 'package:yuva_ride/main.dart';
 import 'package:yuva_ride/models/place_suggestion_model.dart';
 import 'package:yuva_ride/services/map_services.dart';

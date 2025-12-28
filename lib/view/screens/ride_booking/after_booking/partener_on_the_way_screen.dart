@@ -1,7 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:yuva_ride/main.dart';
+import 'package:yuva_ride/provider/book_ride_provider.dart';
+import 'package:yuva_ride/services/status.dart';
+import 'package:yuva_ride/utils/app_urls.dart';
 import 'package:yuva_ride/view/custom_widgets/cusotm_back.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_scaffold_utils.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -23,7 +27,6 @@ class PartnerOnTheWayScreen extends StatefulWidget {
 
 class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
   GoogleMapController? mapController;
-  bool isDriverFound = false;
   Timer? rideTimer;
 
   int elapsedSeconds = 0;
@@ -31,12 +34,12 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
   @override
   void initState() {
     super.initState();
-    startRideTimer();
+    // startRideTimer();
   }
 
   void startRideTimer() async {
     await Future.delayed(const Duration(seconds: 10));
-    isDriverFound = true;
+    // isDriverFound = true;
     rideTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
         elapsedSeconds++;
@@ -52,6 +55,7 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bookRideProvider = context.read<BookRideProvider>();
     final text = Theme.of(context).textTheme;
 
     return CustomScaffold(
@@ -65,104 +69,299 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
         title: Row(
           children: [
             const SizedBox(width: 10),
-            CustomBack(),
+            const CustomBack(),
             const SizedBox(width: 12),
-            Text(
-              "Partner on the way",
-              style: text.titleMedium!.copyWith(
-                color: Colors.white,
-                fontFamily: AppFonts.medium,
+            InkWell(
+              onTap: () {
+                // bookRideProvider.getDriverProfile(driverId: '225');
+                // bookRideProvider.getAvailableDrivers();
+                bookRideProvider.emitCreateBooking(requestId: '136', driverIds: [225], customerId: '108', tip: '20');
+              },
+              child: Text(
+                "Partner on the way",
+                style: text.titleMedium!.copyWith(
+                  color: Colors.white,
+                  fontFamily: AppFonts.medium,
+                ),
               ),
             ),
           ],
         ),
       ),
-      body: Stack(
-        children: [
-          /// MAP
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Stack(
-              children: [
-                SizedBox(
-                  height: 300,
-                  child: GoogleMap(
-                    onMapCreated: (c) => mapController = c,
-                    initialCameraPosition: const CameraPosition(
-                      target: LatLng(17.4065, 78.4772),
-                      zoom: 14.5,
+      body: Consumer<BookRideProvider>(
+          builder: (context, bookRideProvider, child) {
+        return Stack(
+          children: [
+            /// MAP
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Stack(
+                children: [
+                  SizedBox(
+                    height: 300,
+                    child: GoogleMap(
+                      onMapCreated: (c) => mapController = c,
+                      initialCameraPosition: const CameraPosition(
+                        target: LatLng(17.4065, 78.4772),
+                        zoom: 14.5,
+                      ),
+                      zoomControlsEnabled: false,
+                      myLocationButtonEnabled: false,
                     ),
-                    zoomControlsEnabled: false,
-                    myLocationButtonEnabled: false,
                   ),
-                ),
-                if (!isDriverFound)
-                  Positioned.fill(
-                      top: -screenHeight * .4,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      child: RippleLoader())
-              ],
-            ),
-          ),
-
-          /// WHITE CONTENT BELOW MAP
-          Positioned(
-            top: 300,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: SingleChildScrollView(
-              child: Container(
-                color: AppColors.white,
-                child: Column(
-                  children: [
-                    const SizedBox(height: 12),
-                    !isDriverFound
-                        ? Column(
-                            children: [
-                              Padding(
-                                padding:
-                                    const EdgeInsets.only(left: 20, right: 20),
-                                child: Text(
-                                  "Matching with your rider… don't go anywhere...",
-                                  style: text.titleMedium!.copyWith(
-                                      fontFamily: AppFonts.bold, fontSize: 17),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              const ShimmerDriverCard()
-                            ],
-                          )
-                        : Column(
-                            children: [
-                              TripAndDistanceCard(text: text,elapsedSeconds: elapsedSeconds),
-                              const SizedBox(height: 12),
-                              _otpBox(text),
-                              const SizedBox(height: 12),
-                              _driverCard(text),
-                            ],
-                          ),
-                    const SizedBox(height: 12),
-                    _rideDetails(text),
-                    const SizedBox(height: 12),
-                    _partnerDetails(text),
-                    const SizedBox(height: 12),
-                    _paymentSection(text),
-                    const SizedBox(height: 30),
-                    _cancelButton(text),
-                    const SizedBox(height: 40),
-                  ],
-                ),
+                  if (!isStatusSuccess(
+                      bookRideProvider.driverProfileState.status))
+                    Positioned.fill(
+                        top: -screenHeight * .4,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: const RippleLoader())
+                ],
               ),
             ),
-          )
-        ],
-      ),
+
+            /// WHITE CONTENT BELOW MAP
+            Positioned(
+              top: 300,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: SingleChildScrollView(
+                child: Container(
+                  color: AppColors.white,
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 12),
+                      !isStatusSuccess(
+                              bookRideProvider.driverProfileState.status)
+                          ? Column(
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                      left: 20, right: 20),
+                                  child: Text(
+                                    "Matching with your rider… don't go anywhere...",
+                                    style: text.titleMedium!.copyWith(
+                                        fontFamily: AppFonts.bold,
+                                        fontSize: 17),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                const ShimmerDriverCard()
+                              ],
+                            )
+                          : Column(
+                              children: [
+                                TripAndDistanceCard(
+                                    text: text, elapsedSeconds: elapsedSeconds),
+                                const SizedBox(height: 12),
+                                _otpBox(text),
+                                const SizedBox(height: 12),
+                                Container(
+                                  padding: const EdgeInsets.all(14),
+                                  margin: const EdgeInsets.symmetric(
+                                      horizontal: 18),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(18),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(.05),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 3),
+                                      )
+                                    ],
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      /// ---------------- DRIVER ROW ----------------
+                                      Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            child: Image.network(
+                                              AppUrl.imageUrl +
+                                                  (bookRideProvider
+                                                          .driverProfileState
+                                                          .data
+                                                          ?.dDetail
+                                                          ?.profileImage ??
+                                                      ''),
+                                              height: 60,
+                                              width: 60,
+                                              fit: BoxFit.cover,
+                                              errorBuilder:
+                                                  (context, error, stackTrace) {
+                                                return Image.asset(
+                                                  "assets/images/driver.png",
+                                                  height: 60,
+                                                  width: 60,
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                          const SizedBox(width: 14),
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                "TS26QR8833",
+                                                style:
+                                                    text.titleMedium!.copyWith(
+                                                  fontFamily: AppFonts.medium,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                bookRideProvider
+                                                        .driverProfileState
+                                                        .data
+                                                        ?.dDetail
+                                                        ?.carName ??
+                                                    '',
+                                                style: text.bodySmall!.copyWith(
+                                                    color:
+                                                        Colors.grey.shade700),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                bookRideProvider
+                                                        .driverProfileState
+                                                        .data
+                                                        ?.dDetail
+                                                        ?.firstName ??
+                                                    ' ${bookRideProvider.driverProfileState.data?.dDetail?.firstName ?? ''}',
+                                                style:
+                                                    text.bodyMedium!.copyWith(
+                                                  fontFamily: AppFonts.medium,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+
+                                      const SizedBox(height: 14),
+
+                                      /// ---------------- CALL + MESSAGE BAR ----------------
+                                      Row(
+                                        children: [
+                                          /// CALL ICON BUTTON
+                                          Container(
+                                            padding: const EdgeInsets.all(10),
+                                            decoration: BoxDecoration(
+                                              color: Colors.grey.shade100,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(Icons.call,
+                                                size: 20),
+                                          ),
+
+                                          const SizedBox(width: 12),
+
+                                          /// MESSAGE BUTTON FULL WIDTH
+                                          Expanded(
+                                            child: InkWell(
+                                              onTap: () {
+                                                Navigator.push(
+                                                    context,
+                                                    AppAnimations.fade(
+                                                        const ChatScreen()));
+                                              },
+                                              child: Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 10,
+                                                        horizontal: 12),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.grey.shade100,
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    const Icon(
+                                                        Icons
+                                                            .chat_bubble_outline,
+                                                        size: 18),
+                                                    const SizedBox(width: 8),
+                                                    Text(
+                                                      "Message suresh Kumar",
+                                                      style: text.bodyMedium!
+                                                          .copyWith(
+                                                        color: Colors.black87,
+                                                        fontFamily:
+                                                            AppFonts.medium,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                      const SizedBox(height: 12),
+                      _rideDetails(text),
+                      const SizedBox(height: 12),
+                      _partnerDetails(text),
+                      const SizedBox(height: 12),
+                      _paymentSection(text),
+                      const SizedBox(height: 30),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 18),
+                        child: InkWell(
+                          onTap: () {
+                              {
+                              Navigator.push(
+                                  context,
+                                  AppAnimations.slideBottomToTop(
+                                      const CancelRideReasonScreen()));
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: const Color(0xffFADCDC).withOpacity(.7),
+                              borderRadius: BorderRadius.circular(30),
+                              border: Border.all(color: Colors.red, width: 1.4),
+                            ),
+                            child:  Center(
+                                    child: Text(
+                                      "Cancel ride",
+                                      style: text.titleMedium!.copyWith(
+                                          color: Colors.red,
+                                          fontFamily: AppFonts.medium),
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          ],
+        );
+      }),
     );
   }
 
@@ -192,125 +391,6 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
             "9586",
             style: text.headlineSmall!
                 .copyWith(fontFamily: AppFonts.medium, letterSpacing: 2),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _driverCard(TextTheme text) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      margin: const EdgeInsets.symmetric(horizontal: 18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(.05),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          )
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          /// ---------------- DRIVER ROW ----------------
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.asset(
-                  "assets/images/driver.png",
-                  height: 60,
-                  width: 60,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      height: 60,
-                      width: 60,
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(width: 14),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "TS26QR8833",
-                    style: text.titleMedium!.copyWith(
-                      fontFamily: AppFonts.medium,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    "Bike",
-                    style:
-                        text.bodySmall!.copyWith(color: Colors.grey.shade700),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    "Suresh Kumar",
-                    style: text.bodyMedium!.copyWith(
-                      fontFamily: AppFonts.medium,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 14),
-
-          /// ---------------- CALL + MESSAGE BAR ----------------
-          Row(
-            children: [
-              /// CALL ICON BUTTON
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.call, size: 20),
-              ),
-
-              const SizedBox(width: 12),
-
-              /// MESSAGE BUTTON FULL WIDTH
-              Expanded(
-                child: InkWell(
-                  onTap: () {
-                    Navigator.push(
-                        context, AppAnimations.fade(const ChatScreen()));
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 10, horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.chat_bubble_outline, size: 18),
-                        const SizedBox(width: 8),
-                        Text(
-                          "Message suresh Kumar",
-                          style: text.bodyMedium!.copyWith(
-                            color: Colors.black87,
-                            fontFamily: AppFonts.medium,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
           ),
         ],
       ),
@@ -621,34 +701,6 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
             ],
           ),
         ));
-  }
-
-  Widget _cancelButton(TextTheme text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 18),
-      child: InkWell(
-        onTap: () {
-          Navigator.push(context,
-              AppAnimations.slideBottomToTop(const CancelRideReasonScreen()));
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: const Color(0xffFADCDC).withOpacity(.7),
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: Colors.red, width: 1.4),
-          ),
-          child: Center(
-            child: Text(
-              "Cancel ride",
-              style: text.titleMedium!
-                  .copyWith(color: Colors.red, fontFamily: AppFonts.medium),
-            ),
-          ),
-        ),
-      ),
-    );
   }
 
   Widget paymentSuccessBottomSheet(BuildContext context, TextTheme text) {
