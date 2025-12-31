@@ -6,12 +6,14 @@ import 'package:yuva_ride/models/home/calculator_price_model.dart';
 import 'package:yuva_ride/models/home/contact_model.dart';
 import 'package:yuva_ride/models/home/home_model.dart';
 import 'package:yuva_ride/models/home/payment_coupon_model.dart';
+import 'package:yuva_ride/models/ride_detail_model.dart';
 import 'package:yuva_ride/repository/ride_repository.dart';
 import 'package:yuva_ride/services/local_storage.dart';
 import 'package:yuva_ride/services/map_services.dart';
 import 'package:yuva_ride/services/socket_services.dart';
 import 'package:yuva_ride/services/status.dart';
 import 'package:yuva_ride/utils/app_urls.dart';
+import 'package:yuva_ride/utils/globle_func.dart';
 
 class BookRideProvider extends ChangeNotifier {
   LocationModel? _pickupLocation;
@@ -293,14 +295,14 @@ class BookRideProvider extends ChangeNotifier {
   }
 
   String activeRideRequestId = '';
-  String getActiveRideRequestId(){
+  String getActiveRideRequestId() {
     return activeRideRequestId;
   }
 
-  void saveActiveRideRequestId(String id){
-     activeRideRequestId = id;
+  void saveActiveRideRequestId(String id) {
+    activeRideRequestId = id;
   }
-  
+
   //Cancel Ride
   ApiResponse cancelRideState = ApiResponse.nothing();
   Future<void> cancelRide(
@@ -316,8 +318,7 @@ class BookRideProvider extends ChangeNotifier {
         lat: lat,
         lng: lng,
         requestId: requestId);
-    if (isStatusSuccess(cancelRideState.status))
-    {
+    if (isStatusSuccess(cancelRideState.status)) {
       _socket.emit('Vehicle_Ride_Cancel', {
         'uid': await LocalStorage.getUserId(),
         'driverid': driverIds,
@@ -327,8 +328,76 @@ class BookRideProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  ApiResponse<RideDetailModel> rideDetailState = ApiResponse.loading();
+  Future<void> rideDetail(
+      {required String requestId, required String driverId}) async {
+    rideDetailState = ApiResponse.loading();
+    notifyListeners();
+    rideDetailState =
+        await _repo.getRideDetail(driverId: driverId, requestId: requestId);
+    notifyListeners();
+  }
+
+  /////Map Section
+  final MapService mapService = MapService();
+  Future<void> initMapFeatures(LatLng startLocation, LatLng endLocation) async {
+    await mapService.loadMapIcons(
+        startLocationIcon: 'assets/images/bike.png',
+        endLocationIcon: 'assets/images/green_marker.png');
+    mapService.setPickupDropMarkers(pickup: startLocation, drop: endLocation);
+    // final points = await mapService.getRoutePolyline(
+    //     pickupLatLng, dropLatLng, AppConstants.googleApiKey);
+    mapService.createRoutePolyline([startLocation, endLocation]);
+    await Future.delayed(const Duration(milliseconds: 200));
+    await mapService.fitToPickupDrop(startLocation, endLocation);
+    notifyListeners();
+  }
+
+  Future<void> pickuDropMapFeatures(
+      LatLng startLocation, LatLng endLocation) async {
+    print('start location -  $startLocation');
+    print('end location - $endLocation');
+    print('=======loading icons========');
+    mapService.clearMap();
+    // notifyListeners();
+    // return;
+    await mapService.loadMapIcons();
+    print('setting dropdown and other markers');
+    mapService.setPickupDropMarkers(pickup: startLocation, drop: endLocation);
+
+    await mapService.addMarker(
+      markerId: 'driver',
+      position: startLocation,
+      iconPath: 'assets/images/bike.png',
+      iconSize: 90,
+    );
+    // final points = await mapService.getRoutePolyline(
+    //     pickupLatLng, dropLatLng, AppConstants.googleApiKey);
+    print('creating route polyline');
+    mapService.createRoutePolyline([startLocation, endLocation]);
+
+    await Future.delayed(const Duration(milliseconds: 200));
+    await mapService.fitToPickupDrop(startLocation, endLocation);
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    mapService.mapController = null; // 🔥 VERY IMPORTANT
+    super.dispose();
+  }
+
+  /////Socket Section
+
   final SocketService _socket = SocketService();
   bool isConnected = false;
+  String? _otp;
+  String? get otp => _otp;
+
+  saveOtp(String otp) {
+    _otp = otp;
+    notifyListeners();
+  }
 
   Future<void> init() async {
     final uid = await LocalStorage.getUserId() ?? '';
@@ -360,10 +429,52 @@ class BookRideProvider extends ChangeNotifier {
     });
 
     // ✅ Driver accepted ride
-    _socket.on('acceptvehrequest$uid', (data) {
+    _socket.on('acceptvehrequest$uid', (data) async {
       print('✅ Driver accepted ride');
       print(data);
-      getDriverProfile(driverId: data['u_id']?.toString() ?? '');
+      await getDriverProfile(driverId: data['u_id']?.toString() ?? '');
+      await rideDetail(
+          driverId: data['u_id']?.toString() ?? '',
+          requestId: data['request_id']?.toString() ?? '');
+      final startLocation = LatLng(
+          rideDetailState.data?.driverToCustomer?.driverLocation?.latitude ??
+              17.438911,
+          rideDetailState.data?.driverToCustomer?.driverLocation?.longitude ??
+              78.3983894);
+      // const startLocation = LatLng(, 78.481039);
+      final endLocation = MapService.parseLatLngSafe(
+              rideDetailState.data?.requestData?.picLatLong) ??
+          const LatLng(17.438911, 78.3983894);
+      print('map is creating');
+      initMapFeatures(startLocation, endLocation);
+    });
+
+    _socket.on('Vehicle_D_IAmHere', (data) {
+      //{u_id: 225, c_id: 108, request_id: 677, otp: 2887}
+      print("++++++ /Vehicle_D_IAmHere/ ++++ :---$data");
+      print("Vehicle_D_IAmHere is of type: ${data.runtimeType}");
+      print("Vehicle_D_IAmHere keys: ${data.keys}");
+      print("Vehicle_D_IAmHere id: ${data["c_id"]}");
+      saveOtp(data["otp"]?.toString() ?? '');
+      if ((data["otp"]?.toString() ?? '').isNotEmpty) {
+        showCustomToast(title: 'Driver Arrived at pickup location');
+      }
+      rideDetail(
+          requestId: data["request_id"]?.toString() ?? '',
+          driverId: data["u_id"]?.toString() ?? '');
+    });
+
+    _socket.on('Vehicle_Ride_Start_End$uid', (data) async {
+      print('✅ Driver Vehicle_Ride_Start ride'); 
+      final startLocation = MapService.parseLatLngSafe(
+              rideDetailState.data?.requestData?.picLatLong) ??
+          const LatLng(17.438911, 78.3983894);
+      // const startLocation = LatLng(, 78.481039);
+      final endLocation = MapService.parseLatLngSafe(
+              rideDetailState.data?.requestData?.dropLatLong) ??
+          const LatLng(17.438911, 78.3983894);
+      await rideDetail(requestId: data?['uid']?.toString()??"", driverId: data?['request_id']?.toString()??'');
+      pickuDropMapFeatures(startLocation, endLocation);
     });
 
     // ❌ Ride cancelled

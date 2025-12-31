@@ -48,13 +48,13 @@ class _SelectLocationMapScreenState extends State<SelectLocationMapScreen> {
   Future<void> _loadCurrentLocation() async {
     LatLng? latLng;
     if (widget.latLng == null) {
-      latLng = await _mapService.getCurrentLatLng();
+      latLng = await MapService.getCurrentLatLng();
     } else {
       latLng = widget.latLng;
     }
 
     if (latLng != null && mounted) {
-      LocationModel? location = await _mapService.getAddressFromLatLng(latLng);
+      LocationModel? location = await MapService.getAddressFromLatLng(latLng);
       setState(() {
         selectedPosition = latLng!;
         pickupAddress = location?.address ?? "";
@@ -72,7 +72,7 @@ class _SelectLocationMapScreenState extends State<SelectLocationMapScreen> {
 
     // Get address
     LocationModel? location =
-        await _mapService.getAddressFromLatLng(selectedPosition);
+        await MapService.getAddressFromLatLng(selectedPosition);
 
     if (mounted) {
       setState(() {
@@ -118,7 +118,7 @@ class _SelectLocationMapScreenState extends State<SelectLocationMapScreen> {
 
               // Get address
               LocationModel? location =
-                  await _mapService.getAddressFromLatLng(latLng);
+                  await MapService.getAddressFromLatLng(latLng);
 
               if (mounted) {
                 setState(() {
@@ -133,7 +133,7 @@ class _SelectLocationMapScreenState extends State<SelectLocationMapScreen> {
 
             // 🎯 CENTER PIN LOGIC
             onCameraMove: (position) {
-              selectedPosition = _mapService.onCameraMove(position);
+              selectedPosition = MapService.onCameraMove(position);
             },
           ),
 
@@ -221,7 +221,7 @@ class _SelectLocationMapScreenState extends State<SelectLocationMapScreen> {
                                         .buildSelectedMarker(latLng));
 
                                     //  Get full address
-                                    LocationModel? location = await _mapService
+                                    LocationModel? location = await MapService
                                         .getAddressFromLatLng(latLng);
                                     _focusNode.unfocus();
                                     if (mounted) {
@@ -243,7 +243,7 @@ class _SelectLocationMapScreenState extends State<SelectLocationMapScreen> {
                                   },
                                 ),
                               ),
-                              Divider()
+                              const Divider()
                             ],
                           ),
                         );

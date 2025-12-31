@@ -52,7 +52,6 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
     // mapService.loadVehicleMarkers().then((value) {
     //   setState(() => markers = value);
     // });
-    _setupRouteOnMap();
     sheetCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
@@ -86,53 +85,6 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
 
     // ignore: deprecated_member_use
     return BitmapDescriptor.fromBytes(resizedBytes);
-  }
-
-  Future<void> _setupRouteOnMap() async {
-    final bookingController = context.read<BookRideProvider>();
-    final LatLng pickupLatLng = bookingController.pickupLocation!.latLng;
-
-    final LatLng dropLatLng = bookingController.dropLocation!.latLng;
-    // 1️⃣ Add markers
-    await mapService.addPickupMarker(pickupLatLng);
-    await mapService.addDropMarker(dropLatLng);
-
-    // 2️⃣ Get polyline points
-    final points = await mapService.getRoutePolyline(
-      pickupLatLng,
-      dropLatLng,
-      Constants.mapkey
-    );
-
-    if (points.isNotEmpty) {
-      mapService.drawPolyline(
-        points: points,
-        color: AppColors.primaryColor,
-      );
-    }
-
-    // 3️⃣ Fit camera to route
-    _fitCameraBounds(pickupLatLng, dropLatLng);
-
-    // 4️⃣ Rebuild UI
-    if (mounted) setState(() {});
-  }
-
-  void _fitCameraBounds(LatLng p1, LatLng p2) {
-    final bounds = LatLngBounds(
-      southwest: LatLng(
-        min(p1.latitude, p2.latitude),
-        min(p1.longitude, p2.longitude),
-      ),
-      northeast: LatLng(
-        max(p1.latitude, p2.latitude),
-        max(p1.longitude, p2.longitude),
-      ),
-    );
-
-    mapService.mapController?.animateCamera(
-      CameraUpdate.newLatLngBounds(bounds, 80),
-    );
   }
 
   @override
@@ -170,14 +122,19 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
             child: GoogleMap(
               onMapCreated: (controller) async {
                 mapService.initController(controller);
-                await _setupRouteOnMap();
 
-                // Future.delayed(const Duration(milliseconds: 500), () {
-                //   mapService.runAdvancedCameraAnimation(
-                //     latlng: bookingController.pickupLocation?.latLng ??
-                //         const LatLng(17.4075, 78.4764),
-                //   );
-                // });
+                await mapService.loadMapIcons(
+                    startLocationIcon: 'assets/images/green_marker.png',
+                    endLocationIcon:
+                        'assets/images/red_marker.png'); // MUST finish first
+
+                await mapService.setupRoute(
+                  pickup: bookingProvider.pickupLocation!.latLng,
+                  drop: bookingProvider.dropLocation!.latLng,
+                );
+                if (mounted) {
+                  setState(() {});
+                }
               },
 
               initialCameraPosition: CameraPosition(
@@ -192,9 +149,7 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
               myLocationButtonEnabled: false,
 
               /// 👇 MAIN LOGIC HERE
-              onTap: (LatLng latLng) async {
-                _setupRouteOnMap();
-              },
+              onTap: (LatLng latLng) async {},
             ),
           ),
 
@@ -297,10 +252,10 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
                                   bookProvider.setVehicle(
                                       data?.id.toString() ?? '',
                                       data?.dropPrice.toString() ?? '');
-                                      bookProvider.assignDriverId(data?.drivers);
-                                      if (kDebugMode) {
-                                        print(data?.drivers);
-                                      }
+                                  bookProvider.assignDriverId(data?.drivers);
+                                  if (kDebugMode) {
+                                    print(data?.drivers);
+                                  }
                                 },
                                 isSelected: bookProvider.selectedVehicle?.id ==
                                     data?.id.toString(),
@@ -494,9 +449,9 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
               return CustomButton(
                 isLoading: isStatusLoading(provider.rideCreateState.status),
                 onPressed: () async {
-                  await context
-                      .read<BookRideProvider>()
-                      .createRide(tip: selectedFare);
+                 
+                    await  provider.createRide(tip: selectedFare);
+                      provider.rideDetailState = ApiResponse.loading();
                   if (isStatusSuccess(provider.rideCreateState.status)) {
                     // ignore: use_build_context_synchronously
                     Navigator.push(context,

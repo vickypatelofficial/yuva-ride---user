@@ -99,10 +99,14 @@ class _CancelRideReasonScreenState extends State<CancelRideReasonScreen> {
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 18),
               child: CustomInkWell(
-                onTap: ()async {
-                 await bookRideProvider.cancelRide(
+                onTap: () async {
+                  await bookRideProvider.cancelRide(
                       cancelId: '3',
-                      requestId: bookRideProvider.getActiveRideRequestId(),
+                      requestId:
+                          // bookRideProvider.rideDetailState.data?.cartTableId ??
+                          //     bookRideProvider
+                          //         .rideDetailState.data?.requestTableId ??
+                              bookRideProvider.getActiveRideRequestId(),
                       lat: bookRideProvider.pickupLocation?.latLng.latitude
                               .toString() ??
                           '',
@@ -111,11 +115,8 @@ class _CancelRideReasonScreenState extends State<CancelRideReasonScreen> {
                           '');
                   if (isStatusSuccess(
                       bookRideProvider.cancelRideState.status)) {
-                    Navigator.pushAndRemoveUntil(
-                        // ignore: use_build_context_synchronously
-                        context,
-                        AppAnimations.slideBottomToTop(const HomeScreen()),
-                        (_) => false);
+                    // ignore: use_build_context_synchronously
+                    Navigator.pop(context);
                   }
                 },
                 padding: const EdgeInsets.symmetric(vertical: 14),

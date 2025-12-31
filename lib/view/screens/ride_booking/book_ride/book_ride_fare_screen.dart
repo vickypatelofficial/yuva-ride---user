@@ -116,9 +116,9 @@ class _BookRideFareScreenState extends State<BookRideFareScreen>
                 mapService.initController(controller);
 
                 Future.delayed(const Duration(milliseconds: 500), () {
-                  mapService.runAdvancedCameraAnimation(
-                      latlng:
-                          const LatLng(17.401599313936217, 78.47910862416029));
+                  // mapService.runAdvancedCameraAnimation(
+                  //     latlng:
+                  //         const LatLng(17.401599313936217, 78.47910862416029));
                 });
               },
               onTap: (argument) {

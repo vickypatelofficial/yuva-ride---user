@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yuva_ride/main.dart';
 import 'package:yuva_ride/provider/book_ride_provider.dart';
+import 'package:yuva_ride/services/map_services.dart';
 import 'package:yuva_ride/services/status.dart';
 import 'package:yuva_ride/utils/app_urls.dart';
 import 'package:yuva_ride/view/custom_widgets/cusotm_back.dart';
@@ -69,13 +70,40 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
         title: Row(
           children: [
             const SizedBox(width: 10),
-            const CustomBack(),
+            CustomBack(onTap: ()async {
+              Navigator.pop(context);
+              return;
+              // return;
+              final startLocation = MapService.parseLatLngSafe(bookRideProvider
+                      .rideDetailState.data?.requestData?.picLatLong);
+              // const startLocation = LatLng(, 78.481039);
+              final endLocation = MapService.parseLatLngSafe(bookRideProvider
+                      .rideDetailState.data?.requestData?.dropLatLong);
+              print('map is creating');
+              bookRideProvider.pickuDropMapFeatures(startLocation!, endLocation!);
+              // bookRideProvider.pickuDropMapFeatures(
+              //     LatLng(17.418367, 78.459889),
+              //     LatLng(17.43890396188094, 78.39839525520802));
+            }),
             const SizedBox(width: 12),
             InkWell(
               onTap: () {
                 // bookRideProvider.getDriverProfile(driverId: '225');
                 // bookRideProvider.getAvailableDrivers();
-                bookRideProvider.emitCreateBooking(requestId: '136', driverIds: [225], customerId: '108', tip: '20');
+                // bookRideProvider.initMapFeatures(startLocation, endLocation);
+                // final startLocation = LatLng(
+                //     bookRideProvider.rideDetailModel.data?.driverToCustomer
+                //             ?.driverLocation?.latitude ??
+                //         17.438911,
+                //     bookRideProvider.rideDetailModel.data?.driverToCustomer
+                //             ?.driverLocation?.longitude ??
+                //         78.3983894);
+                // // const startLocation = LatLng(, 78.481039);
+                // final endLocation = MapService.parseLatLngSafe(bookRideProvider
+                //         .rideDetailModel.data?.requestData?.picLatLong) ??
+                //     const LatLng(17.438911, 78.3983894);
+                // print('map is creating');
+                // bookRideProvider.initMapFeatures(startLocation, endLocation);
               },
               child: Text(
                 "Partner on the way",
@@ -103,11 +131,15 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
                   SizedBox(
                     height: 300,
                     child: GoogleMap(
-                      onMapCreated: (c) => mapController = c,
+                      onMapCreated: (c) {
+                        bookRideProvider.mapService.initController(c);
+                      },
                       initialCameraPosition: const CameraPosition(
                         target: LatLng(17.4065, 78.4772),
                         zoom: 14.5,
                       ),
+                      markers: bookRideProvider.mapService.markers,
+                      polylines: bookRideProvider.mapService.polylines,
                       zoomControlsEnabled: false,
                       myLocationButtonEnabled: false,
                     ),
@@ -159,7 +191,57 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
                                 TripAndDistanceCard(
                                     text: text, elapsedSeconds: elapsedSeconds),
                                 const SizedBox(height: 12),
-                                _otpBox(text),
+                                Builder(builder: (context) {
+                                  if (bookRideProvider.otp == null ||
+                                      (bookRideProvider.rideDetailState.data
+                                              ?.requestData?.status !=
+                                          '2')) {
+                                    return SizedBox(
+                                      child: Text(bookRideProvider
+                                              .rideDetailState
+                                              .data
+                                              ?.requestData
+                                              ?.status
+                                              .toString() ??
+                                          ''),
+                                    );
+                                  }
+                                  return Container(
+                                    padding: const EdgeInsets.all(14),
+                                    margin: const EdgeInsets.symmetric(
+                                        horizontal: 18),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(14),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          // ignore: deprecated_member_use
+                                          color: Colors.black.withOpacity(.05),
+                                          blurRadius: 12,
+                                          offset: const Offset(0, 3),
+                                        )
+                                      ],
+                                    ),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                            "Share the code to unlock\nyour ride.",
+                                            style: text.bodyMedium),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          bookRideProvider.otp ?? '',
+                                          style: text.headlineSmall!.copyWith(
+                                              fontFamily: AppFonts.medium,
+                                              letterSpacing: 2),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }),
                                 const SizedBox(height: 12),
                                 Container(
                                   padding: const EdgeInsets.all(14),
@@ -327,7 +409,7 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 18),
                         child: InkWell(
                           onTap: () {
-                              {
+                            {
                               Navigator.push(
                                   context,
                                   AppAnimations.slideBottomToTop(
@@ -342,14 +424,14 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
                               borderRadius: BorderRadius.circular(30),
                               border: Border.all(color: Colors.red, width: 1.4),
                             ),
-                            child:  Center(
-                                    child: Text(
-                                      "Cancel ride",
-                                      style: text.titleMedium!.copyWith(
-                                          color: Colors.red,
-                                          fontFamily: AppFonts.medium),
-                                    ),
-                                  ),
+                            child: Center(
+                              child: Text(
+                                "Cancel ride",
+                                style: text.titleMedium!.copyWith(
+                                    color: Colors.red,
+                                    fontFamily: AppFonts.medium),
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -362,38 +444,6 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
           ],
         );
       }),
-    );
-  }
-
-  Widget _otpBox(TextTheme text) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      margin: const EdgeInsets.symmetric(horizontal: 18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            // ignore: deprecated_member_use
-            color: Colors.black.withOpacity(.05),
-            blurRadius: 12,
-            offset: const Offset(0, 3),
-          )
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text("Share the code to unlock\nyour ride.", style: text.bodyMedium),
-          const SizedBox(height: 6),
-          Text(
-            "9586",
-            style: text.headlineSmall!
-                .copyWith(fontFamily: AppFonts.medium, letterSpacing: 2),
-          ),
-        ],
-      ),
     );
   }
 

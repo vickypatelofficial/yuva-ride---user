@@ -4,6 +4,7 @@ import 'package:yuva_ride/models/home/calculator_price_model.dart';
 import 'package:yuva_ride/models/home/contact_model.dart';
 import 'package:yuva_ride/models/home/home_model.dart';
 import 'package:yuva_ride/models/home/payment_coupon_model.dart';
+import 'package:yuva_ride/models/ride_detail_model.dart';
 import 'package:yuva_ride/services/api_services.dart';
 import 'package:yuva_ride/services/status.dart';
 import 'package:yuva_ride/utils/app_urls.dart';
@@ -187,7 +188,7 @@ class RideRepository {
     );
   }
 
-  /// 🔹 Driver Profile 
+  /// 🔹 Driver Profile
   Future<ApiResponse<DriverProfileModel>> getDriverProfile({
     required String driverId,
   }) async {
@@ -222,5 +223,19 @@ class RideRepository {
     );
   }
 
-
+  /// 🔹 Get ride Ride
+  Future<ApiResponse<RideDetailModel>> getRideDetail({
+    required String driverId,
+    required String requestId,
+  }) async {
+    final response = await _api.post(
+      AppUrl.rideDetail,
+      {"uid": driverId, "request_id": requestId},
+    );
+    if (isStatusSuccess(response.status)) {
+      return ApiResponse.success(RideDetailModel.fromJson(response.data));
+    } else {
+      return ApiResponse.error(response.message);
+    }
+  }
 }

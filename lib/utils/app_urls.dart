@@ -31,10 +31,11 @@ class AppUrl {
   static const String addSavedContact = '${baseUrl}add_saved_contact';
   static const String deleteSavedContact = '${baseUrl}delete_saved_contact';
   static const String driverProfileDetail = '${baseUrl}driver_profile_detail';
-  static const String cancelRide = '${baseUrl}vehicle_ride_cancel'; 
-  
-  static const String socketUrl =
-      'https://yuvaride.techlanditsolutions.com';
+  static const String cancelRide = '${baseUrl}vehicle_ride_cancel';
+
+  static const String rideDetail = 'https://yuvaride.techlanditsolutions.com/driver/cus_ride_detail';
+
+  static const String socketUrl = 'https://yuvaride.techlanditsolutions.com';
 
 // static const String url = '${baseUrl}url';
 // static const String url = '${baseUrl}url';
