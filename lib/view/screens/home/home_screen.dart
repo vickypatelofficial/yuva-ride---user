@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/foundation.dart';
 
@@ -31,27 +33,33 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void initState() {
-    super.initState(); 
-    mapService.loadVehicleMarkers().then((value) {
-      setState(() => markers = value);
-    });
+    super.initState();
+    _loadMarkers();
   }
 
-  Future<BitmapDescriptor> getResizedMarker(String path, int width) async {
-    final ByteData data = await rootBundle.load(path);
-    final Uint8List bytes = data.buffer.asUint8List();
+  Future<void> _loadMarkers() async {
+    final loadedMarkers = await mapService.loadVehicleMarkers();
+    setState(() {
+      markers = loadedMarkers;
+    });
 
-    final ui.Codec codec =
-        await ui.instantiateImageCodec(bytes, targetWidth: width);
-    final ui.FrameInfo fi = await codec.getNextFrame();
+    // move camera to markers
+    mapService.mapController?.animateCamera(
+      CameraUpdate.newLatLngBounds(
+        _boundsFromMarkers(loadedMarkers),
+        20,
+      ),
+    );
+  }
 
-    final Uint8List resizedBytes =
-        (await fi.image.toByteData(format: ui.ImageByteFormat.png))!
-            .buffer
-            .asUint8List();
-
-    // ignore: deprecated_member_use
-    return BitmapDescriptor.fromBytes(resizedBytes);
+  LatLngBounds _boundsFromMarkers(Set<Marker> markers) {
+    final lats = markers.map((m) => m.position.latitude);
+    final lngs = markers.map((m) => m.position.longitude);
+    
+    return LatLngBounds(
+      southwest: LatLng(lats.reduce(min), lngs.reduce(min)),
+      northeast: LatLng(lats.reduce(max), lngs.reduce(max)),
+    );
   }
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -74,18 +82,21 @@ class _HomeScreenState extends State<HomeScreen> {
             title: Row(
               children: [
                 InkWell(
-                  onTap: () async{
-                  //   LocalStorage.clearLocalStorate();
-                  //   return;
-                  // String userId=  await LocalStorage.getUserId()??"";
-                  // print(userId);
+                  onTap: () async {
+                    debugPrint(markers.length.toString());
+                    mapService.moreIconCamereraAnimation();
+                    //   LocalStorage.clearLocalStorate();
+                    //   return;
+                    // String userId=  await LocalStorage.getUserId()??"";
+                    // print(userId);
                   },
-                  child: Text(
-                    "Yuva Rider",
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: Colors.white,
-                        ),
-                  ),
+                  // child: Text(
+                  //   "Yuva Rider",
+                  //   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  //         color: Colors.white,
+                  //       ),
+                  // ),
+                  child: Image.asset('assets/images/logo.png',height: 70,width: 70),
                 ),
                 const Spacer(),
                 Container(
@@ -167,12 +178,16 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 SizedBox(
                   height: 300,
+                  
                   child: GoogleMap(
-                    onMapCreated: (controller) {
+                    onTap: (argument) {
+                      print(argument.toString());
+                    },
+                    onMapCreated: (controller){
                       mapService.initController(controller);
-
-                      Future.delayed(const Duration(milliseconds: 500), () {
-                        mapService.runAdvancedCameraAnimation();
+                      Future.delayed(const Duration(milliseconds: 500),
+                      (){
+                        mapService.moreIconCamereraAnimation();
                       });
                     },
                     initialCameraPosition: const CameraPosition(
@@ -339,22 +354,23 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // 10% OFF
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                    margin: const EdgeInsets.only(top: 8, left: 8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xff0F59ED),
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                    child: Text(
-                      "10% OFF",
-                      style: Theme.of(context)
-                          .textTheme
-                          .labelLarge
-                          ?.copyWith(color: Colors.white),
-                    ),
-                  ),
+                  // Container(
+                  //   padding:
+                  //       const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                  //   margin: const EdgeInsets.only(top: 8, left: 8),
+                  //   decoration: BoxDecoration(
+                  //     color: const Color(0xff0F59ED),
+                  //     borderRadius: BorderRadius.circular(25),
+                  //   ),
+                  //   child: Text(
+                  //     "10% OFF",
+                  //     style: Theme.of(context)
+                  //         .textTheme
+                  //         .labelLarge
+                  //         ?.copyWith(color: Colors.white),
+                  //   ),
+                  // ),
+                  SizedBox(height: 20,),
 
                   const SizedBox(height: 2),
 

@@ -29,7 +29,7 @@ class RideRepository {
     required Map<String, String> dropAdd,
     required int tip,
     required String serviceCategory,
-    String couponId = "",
+    int? couponId,
     String bidAutoStatus = "0",
     String droplist = "",
     String? bookFor,
@@ -47,6 +47,7 @@ class RideRepository {
       "tot_minute": totalMinute,
       "payment_id": paymentId,
       "m_role": mRole,
+      if(couponId!=null)
       "coupon_id": couponId,
       "bidd_auto_status": bidAutoStatus,
       "pickup": pickup,
@@ -61,6 +62,8 @@ class RideRepository {
       if (otherName != null) "other_name": otherName,
       if (otherPhone != null) "other_phone": otherPhone
     };
+    print(body);
+    // return ApiResponse.error('');
 
     final response = await _api.post(AppUrl.addVehicleRequest, body);
 
@@ -88,7 +91,8 @@ class RideRepository {
     required String dropLatLon,
     required List dropLatLonList,
     required String serviceCategory,
-    String? couponId,
+    int? couponId,
+    String? couponCode,
   }) async {
     final body = {
       "uid": uid,
@@ -98,7 +102,8 @@ class RideRepository {
       "pickup_lat_lon": pickupLatLon,
       "drop_lat_lon": dropLatLon,
       "drop_lat_lon_list": dropLatLonList,
-      if (couponId != null) "coupon_id": couponId,
+      if (couponId != null && couponCode ==null) "coupon_id": couponId,
+      if (couponCode !=null) "coupon_code": couponCode,
     };
 
     final response = await _api.post(AppUrl.calculate, body);

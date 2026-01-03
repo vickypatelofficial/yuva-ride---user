@@ -255,19 +255,61 @@ void clearMap() {
   }
 
   // Advanced camera animation
-  Future<void> runAdvancedCameraAnimation() async {
+  Future<void>  runAdvancedCameraAnimation() async {
     if (mapController == null) return;
 
     const LatLng center = LatLng(17.4486, 78.3908);
 
     await mapController!.animateCamera(
-      CameraUpdate.newCameraPosition(CameraPosition(
+      CameraUpdate.newCameraPosition(const CameraPosition(
         target: center,
         zoom: 12,
         tilt: 0,
         bearing: 0,
       )),
     );
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    await mapController!.animateCamera(
+      CameraUpdate.newCameraPosition(CameraPosition(
+        target: center,
+        zoom: 13.5,
+        tilt: 45,
+        bearing: 20,
+      )),
+    );
+    // await Future.delayed(const Duration(milliseconds: 300));
+
+    // await mapController!.animateCamera(
+    //   CameraUpdate.newLatLng(const LatLng(17.4078, 78.4779)),
+    // );
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    // Final TOP VIEW
+    await mapController!.animateCamera(
+      CameraUpdate.newCameraPosition(const CameraPosition(
+        target: center,
+        zoom: 15.5,
+        tilt: 0,
+        bearing: 0,
+      )),
+    );
+  }
+
+   // Advanced camera animation
+  Future<void>  moreIconCamereraAnimation() async {
+    if (mapController == null) return;
+
+    const LatLng center = LatLng(17.408151707455986, 78.4787243977189);
+
+    await mapController!.animateCamera(
+      CameraUpdate.newCameraPosition(const CameraPosition(
+        target: center,
+        zoom: 12,
+        tilt: 0,
+        bearing: 0,
+      )),
+    ); 
     await Future.delayed(const Duration(milliseconds: 300));
 
     await mapController!.animateCamera(
@@ -497,7 +539,7 @@ void clearMap() {
       "${p.name}, ${p.subLocality}, ${p.locality}, ${p.administrativeArea}, ${p.country}";
       return LocationModel(latLng,
           "${p.name}, ${p.subLocality}, ${p.locality}, ${p.administrativeArea}, ${p.country}",
-          title: p.locality ?? '', subtitle: p.subLocality ?? '');
+          title:'${p.name}, ${p.subLocality}, ${p.locality}', subtitle: '${p.administrativeArea}, ${p.country}');
     } catch (e) {
       print(e.toString());
     }
@@ -560,12 +602,14 @@ void clearMap() {
       final String request =
           '$baseURL?input=$input&key=${Constants.mapkey}&sessiontoken=$_sessionToken';
 
-      if (kDebugMode) {
+      if (kDebugMode){
         debugPrint("Places API: $request");
       }
 
       final response = await http.get(Uri.parse(request));
       final data = json.decode(response.body);
+      print('===========suggestions=========');
+      print(data.toString());
 
       if (response.statusCode == 200) {
         final List predictions = data['predictions'];
@@ -575,14 +619,13 @@ void clearMap() {
       }
     } catch (e) {
       debugPrint("Places Error: $e");
-      return [];
+      return []; //
     }
   }
 
   Future<LatLng?> getLatLngFromPlaceId(String placeId) async {
     try {
-      const String baseURL =
-          'https://maps.googleapis.com/maps/api/place/details/json';
+      const String baseURL = 'https://maps.googleapis.com/maps/api/place/details/json';
 
       final String request =
           '$baseURL?place_id=$placeId&key=${Constants.mapkey}';

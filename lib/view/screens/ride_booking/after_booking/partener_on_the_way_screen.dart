@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yuva_ride/main.dart';
 import 'package:yuva_ride/provider/book_ride_provider.dart';
+import 'package:yuva_ride/services/local_storage.dart';
 import 'package:yuva_ride/services/map_services.dart';
 import 'package:yuva_ride/services/status.dart';
 import 'package:yuva_ride/utils/app_urls.dart';
@@ -15,6 +16,7 @@ import 'package:yuva_ride/utils/app_colors.dart';
 import 'package:yuva_ride/utils/app_fonts.dart';
 import 'package:yuva_ride/view/screens/ride_booking/after_booking/cancel_ride_screen.dart';
 import 'package:yuva_ride/view/screens/ride_booking/after_booking/chat_screen.dart';
+import 'package:yuva_ride/view/screens/ride_booking/after_booking/chat_screen_new.dart';
 import 'package:yuva_ride/view/screens/ride_booking/after_booking/ride_completed_screen.dart';
 import 'package:yuva_ride/view/screens/ride_booking/after_booking/widgets/ripple_loader.dart';
 import 'package:yuva_ride/view/screens/ride_booking/after_booking/widgets/shimmer_card_driver.dart';
@@ -70,17 +72,18 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
         title: Row(
           children: [
             const SizedBox(width: 10),
-            CustomBack(onTap: ()async {
+            CustomBack(onTap: () async {
               Navigator.pop(context);
               return;
               // return;
               final startLocation = MapService.parseLatLngSafe(bookRideProvider
-                      .rideDetailState.data?.requestData?.picLatLong);
+                  .rideDetailState.data?.requestData?.picLatLong);
               // const startLocation = LatLng(, 78.481039);
               final endLocation = MapService.parseLatLngSafe(bookRideProvider
-                      .rideDetailState.data?.requestData?.dropLatLong);
+                  .rideDetailState.data?.requestData?.dropLatLong);
               print('map is creating');
-              bookRideProvider.pickuDropMapFeatures(startLocation!, endLocation!);
+              bookRideProvider.pickuDropMapFeatures(
+                  startLocation!, endLocation!);
               // bookRideProvider.pickuDropMapFeatures(
               //     LatLng(17.418367, 78.459889),
               //     LatLng(17.43890396188094, 78.39839525520802));
@@ -268,8 +271,7 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           ClipRRect(
-                                            borderRadius:
-                                                BorderRadius.circular(12),
+                                            borderRadius: BorderRadius.circular(12),
                                             child: Image.network(
                                               AppUrl.imageUrl +
                                                   (bookRideProvider
@@ -354,11 +356,22 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
                                           /// MESSAGE BUTTON FULL WIDTH
                                           Expanded(
                                             child: InkWell(
-                                              onTap: () {
+                                              onTap: () async {
+                                                // Navigator.push(
+                                                //     context,
+                                                //     AppAnimations.fade(
+                                                //         const ChatScreen()));
                                                 Navigator.push(
+                                                    // ignore: use_build_context_synchronously
                                                     context,
                                                     AppAnimations.fade(
-                                                        const ChatScreen()));
+                                                        ChatScreenNew(
+                                                      userId: await LocalStorage
+                                                              .getUserId() ??
+                                                          '',
+                                                      driverId: bookRideProvider
+                                                          .driverCurrentId!,
+                                                    )));
                                               },
                                               child: Container(
                                                 padding:

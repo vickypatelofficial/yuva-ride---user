@@ -1,39 +1,42 @@
 // constants.dart
 
 class AppUrl {
-  static const String baseUrl =
-      'https://yuvaride.techlanditsolutions.com/customer/';
+  static const String baseUrl = 'https://yuvaride.techlanditsolutions.com';
+  static const String customerBaseUrl =
+      '$baseUrl/customer/';
   static const String imageUrl = '';
 
   //  AUTH APIs
-  static const String requestOtp = '${baseUrl}msg91';
-  static const String mobileCheck = '${baseUrl}mobile_check';
-  static const String verifyOtp = '${baseUrl}otp_verify';
-  static const String signup = '${baseUrl}signup';
-  static const String login = '${baseUrl}login';
+  static const String requestOtp = '${customerBaseUrl}msg91';
+  static const String mobileCheck = '${customerBaseUrl}mobile_check';
+  static const String verifyOtp = '${customerBaseUrl}otp_verify';
+  static const String signup = '${customerBaseUrl}signup';
+  static const String login = '${customerBaseUrl}login';
 
   //  PROFILE
-  static String getCustomer(String userId) => '${baseUrl}get_customer/$userId';
+  static String getCustomer(String userId) => '${customerBaseUrl}get_customer/$userId';
 
   // HOME
-  static String home = '${baseUrl}home';
+  static String home = '${customerBaseUrl}home';
 
-  static const String calculate = '${baseUrl}module_calculate';
+  static const String calculate = '${customerBaseUrl}module_calculate';
 
   ///Ride
-  static const String addVehicleRequest = '${baseUrl}add_vehicle_request';
+  static const String addVehicleRequest = '${customerBaseUrl}add_vehicle_request';
 
-  static const String availableDriver = '${baseUrl}vehicle_calculate';
+  static const String availableDriver = '${customerBaseUrl}vehicle_calculate';
 
-  static const String couponPayment = '${baseUrl}coupon_payment';
+  static const String couponPayment = '${customerBaseUrl}coupon_payment';
 
-  static const String getSavedContacts = '${baseUrl}get_saved_contacts';
-  static const String addSavedContact = '${baseUrl}add_saved_contact';
-  static const String deleteSavedContact = '${baseUrl}delete_saved_contact';
-  static const String driverProfileDetail = '${baseUrl}driver_profile_detail';
-  static const String cancelRide = '${baseUrl}vehicle_ride_cancel';
+  static const String getSavedContacts = '${customerBaseUrl}get_saved_contacts';
+  static const String addSavedContact = '${customerBaseUrl}add_saved_contact';
+  static const String deleteSavedContact = '${customerBaseUrl}delete_saved_contact';
+  static const String driverProfileDetail = '${customerBaseUrl}driver_profile_detail';
+  static const String cancelRide = '${customerBaseUrl}vehicle_ride_cancel';
 
-  static const String rideDetail = 'https://yuvaride.techlanditsolutions.com/driver/cus_ride_detail';
+  static const String rideDetail = '$baseUrl/driver/cus_ride_detail';
+    static const String chatList =
+      '$baseUrl/chat/chat_list';
 
   static const String socketUrl = 'https://yuvaride.techlanditsolutions.com';
 

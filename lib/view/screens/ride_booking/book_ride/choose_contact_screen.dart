@@ -84,6 +84,7 @@ class _ChooseSavedContactScreenState extends State<ChooseSavedContactScreen> {
                             isSelf: false,
                             phone: contact.phone,
                             id: contact.id,
+                            name: contact.name,
                             cId: contact.cId,
                             countryCode: contact.countryCode);
                         print(provider.selectedContact?.id);

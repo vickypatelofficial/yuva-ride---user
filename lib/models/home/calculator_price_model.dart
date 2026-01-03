@@ -2,8 +2,11 @@ class CalculatedPriceModel {
   final int responseCode;
   final bool result;
   final String message;
+  final int? couponId;
+  final String? couponCode;
+  final String? couponTitle;
   final String serviceCategory;
-  final String couponStatus; // ✅ NEW
+  final String couponStatus;
   final List<CalDriver> calDriver;
 
   CalculatedPriceModel({
@@ -12,7 +15,7 @@ class CalculatedPriceModel {
     required this.message,
     required this.serviceCategory,
     required this.couponStatus,
-    required this.calDriver,
+    required this.calDriver,  this.couponId,  this.couponCode,  this.couponTitle,
   });
 
   factory CalculatedPriceModel.fromJson(Map<String, dynamic>? json) {
@@ -29,6 +32,9 @@ class CalculatedPriceModel {
 
     return CalculatedPriceModel(
       responseCode: _toInt(json['ResponseCode']),
+      couponId: json['coupon_id'],
+      couponCode: json['coupon_code'],
+      couponTitle: json['coupon_title'],
       result: json['Result'] == true,
       message: json['message']?.toString() ?? "",
       serviceCategory: json['service_category']?.toString() ?? "",
@@ -68,6 +74,7 @@ class CalDriver {
   final List<dynamic> drivers;
 
   final PricingBreakdown pricing;
+  final String? driPicTime;
 
   CalDriver({
     required this.id,
@@ -90,6 +97,7 @@ class CalDriver {
     required this.dropTime,
     required this.pricing,
     required this.drivers,
+    this.driPicTime,
     this.finalPrice,
     this.discount,
   });
@@ -100,6 +108,7 @@ class CalDriver {
     return CalDriver(
       id: _toInt(json['id']),
       image: json['image']?.toString() ?? "",
+      driPicTime: json['dri_pic_time']?.toString() ?? "",
       mapImage: json['map_img']?.toString() ?? "",
       name: json['name']?.toString() ?? "",
       serviceCategory: json['service_category']?.toString() ?? "",
@@ -131,6 +140,7 @@ class CalDriver {
         mapImage: "",
         name: "",
         serviceCategory: "",
+        driPicTime: null,
         vehicleType: "",
         description: "",
         minKmDistance: 0,

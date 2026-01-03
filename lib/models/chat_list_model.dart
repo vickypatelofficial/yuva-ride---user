@@ -91,19 +91,28 @@ class Chat {
 class UserData {
   int id;
   String name;
+  String firstName;
+  String lastName;
+  String profileImage;
 
   UserData({
     required this.id,
-    required this.name,
+    required this.name,required this.firstName,required this.lastName,required this.profileImage,
   });
 
   factory UserData.fromJson(Map<String, dynamic> json) => UserData(
-    id: json["id"],
-    name: json["name"],
+    id: json?["id"]??0,
+    name: json?["name"]??'',
+    lastName: json?["last_name"]??'',
+    firstName: json?["first_name"]??'',
+    profileImage: json?["profile_image"]??'', 
   );
 
   Map<String, dynamic> toJson() => {
     "id": id,
     "name": name,
+    "first_name": id,
+    "last_name": name,
+    "profile_image": id,
   };
 }

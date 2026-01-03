@@ -48,8 +48,10 @@ class BookRideProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setVehicle(String id, String price) {
-    _selectedVehicle = VehicleModel(price, id);
+  void setVehicle(String id, String price, String discountPrice) {
+    _selectedVehicle = VehicleModel(price, id, discountPrice);
+    print(price);
+    print(id);
     notifyListeners();
   }
 
@@ -94,14 +96,20 @@ class BookRideProvider extends ChangeNotifier {
     calculateState = ApiResponse.loading();
     notifyListeners();
     calculateState = await _repo.calculateRide(
-        uid: await LocalStorage.getUserId() ?? '',
-        pickupLatLon:
-            "${pickupLocation?.latLng.latitude},${pickupLocation?.latLng.longitude}", // pickupLatLon,
-        dropLatLon:
-            "${dropLocation?.latLng.latitude},${dropLocation?.latLng.longitude}", // dropLatLon,
-        serviceCategory: selectedCategory ?? '',
-        dropLatLonList: [],
-        couponId: selectedCoupon?.id);
+      uid: await LocalStorage.getUserId() ?? '',
+      pickupLatLon:
+          "${pickupLocation?.latLng.latitude},${pickupLocation?.latLng.longitude}", // pickupLatLon,
+      dropLatLon:
+          "${dropLocation?.latLng.latitude},${dropLocation?.latLng.longitude}", // dropLatLon,
+      serviceCategory: selectedCategory ?? '',
+      dropLatLonList: [],
+      couponId: selectedCoupon?.id, couponCode: selectedCoupon?.couponCode,
+    );
+    _selectedVehicle = VehicleModel('', '', '');
+    if (isStatusSuccess(calculateState.status)) {
+      _selectedCoupon = SelectCoupenModel(calculateState.data?.couponTitle,
+          calculateState.data?.couponId, calculateState.data?.couponCode);
+    }
     notifyListeners();
   }
 
@@ -180,14 +188,29 @@ class BookRideProvider extends ChangeNotifier {
         "title": dropLocation?.title ?? "",
         "subt": dropLocation?.subtitle ?? ""
       },
-
-      couponId: selectedCoupon?.id ?? '',
+      couponId: selectedCoupon?.id,
       tip: tip, paymentId: selectedPayment?.id ?? '',
       mRole: '1',
       serviceCategory: _selectedCategory ?? '',
-      // bookFor:(selectedContact?.isSelf ==null)?'my_self':( (selectedContact!.isSelf)?),
-      // otherName: other,
-      // otherPhone: ,
+      bookFor:
+          (selectedContact?.isSelf == null || selectedContact?.isSelf == true)
+              ? 'self'
+              : 'other',
+
+      otherName:
+          (((selectedContact?.isSelf == null || selectedContact?.isSelf == true)
+                      ? 'self'
+                      : 'other') ==
+                  'other')
+              ? selectedContact?.name
+              : null,
+      otherPhone:
+          (((selectedContact?.isSelf == null || selectedContact?.isSelf == true)
+                      ? 'self'
+                      : 'other') ==
+                  'other')
+              ? selectedContact?.phone
+              : null,
     );
     if (isStatusSuccess(rideCreateState.status)) {
       try {
@@ -205,13 +228,13 @@ class BookRideProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  SelectPaymentModel? _selectedPayment;
+  SelectPaymentModel? _selectedPayment = SelectPaymentModel('Cash', "9");
   SelectPaymentModel? get selectedPayment => _selectedPayment;
   SelectCoupenModel? _selectedCoupon;
   SelectCoupenModel? get selectedCoupon => _selectedCoupon;
 
-  void setCoupon(String text, String id) {
-    _selectedCoupon = SelectCoupenModel(text, id);
+  void setCoupon(String? text, int? id, String? couponCode) {
+    _selectedCoupon = SelectCoupenModel(text, id, couponCode);
     notifyListeners();
   }
 
@@ -230,7 +253,7 @@ class BookRideProvider extends ChangeNotifier {
 
   ApiResponse<List<SavedContactModel>> contactState = ApiResponse.nothing();
 
-  SelectContactModel? _selectedContact;
+  SelectContactModel? _selectedContact = SelectContactModel(isSelf: true);
 
   SelectContactModel? get selectedContact => _selectedContact;
 
@@ -286,6 +309,8 @@ class BookRideProvider extends ChangeNotifier {
   }
 
   // Get Driver Profile
+
+  String? driverCurrentId;
   ApiResponse<DriverProfileModel?> driverProfileState = ApiResponse.loading();
   Future<void> getDriverProfile({required String driverId}) async {
     driverProfileState = ApiResponse.loading();
@@ -433,6 +458,7 @@ class BookRideProvider extends ChangeNotifier {
       print('✅ Driver accepted ride');
       print(data);
       await getDriverProfile(driverId: data['u_id']?.toString() ?? '');
+      driverCurrentId = data['u_id']?.toString();
       await rideDetail(
           driverId: data['u_id']?.toString() ?? '',
           requestId: data['request_id']?.toString() ?? '');
@@ -465,7 +491,7 @@ class BookRideProvider extends ChangeNotifier {
     });
 
     _socket.on('Vehicle_Ride_Start_End$uid', (data) async {
-      print('✅ Driver Vehicle_Ride_Start ride'); 
+      print('✅ Driver Vehicle_Ride_Start ride');
       final startLocation = MapService.parseLatLngSafe(
               rideDetailState.data?.requestData?.picLatLong) ??
           const LatLng(17.438911, 78.3983894);
@@ -473,7 +499,9 @@ class BookRideProvider extends ChangeNotifier {
       final endLocation = MapService.parseLatLngSafe(
               rideDetailState.data?.requestData?.dropLatLong) ??
           const LatLng(17.438911, 78.3983894);
-      await rideDetail(requestId: data?['uid']?.toString()??"", driverId: data?['request_id']?.toString()??'');
+      await rideDetail(
+          requestId: data?['uid']?.toString() ?? "",
+          driverId: data?['request_id']?.toString() ?? '');
       pickuDropMapFeatures(startLocation, endLocation);
     });
 
@@ -526,15 +554,17 @@ class LocationModel {
 }
 
 class VehicleModel {
-  VehicleModel(this.price, this.id);
+  VehicleModel(this.price, this.id, this.discountPrice);
   final String price;
+  final String discountPrice;
   final String id;
 }
 
 class SelectCoupenModel {
-  SelectCoupenModel(this.title, this.id);
-  final String title;
-  final String id;
+  SelectCoupenModel(this.title, this.id, this.couponCode);
+  final String? title;
+  final int? id;
+  final String? couponCode;
 }
 
 class SelectPaymentModel {

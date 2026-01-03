@@ -221,8 +221,9 @@ class _SelectLocationMapScreenState extends State<SelectLocationMapScreen> {
                                         .buildSelectedMarker(latLng));
 
                                     //  Get full address
-                                    LocationModel? location = await MapService
-                                        .getAddressFromLatLng(latLng);
+                                    LocationModel? location =
+                                        await MapService.getAddressFromLatLng(
+                                            latLng);
                                     _focusNode.unfocus();
                                     if (mounted) {
                                       setState(() {
@@ -230,6 +231,12 @@ class _SelectLocationMapScreenState extends State<SelectLocationMapScreen> {
                                         pickupAddress = location?.address ?? "";
                                         title = location?.title ?? "";
                                         subtitle = location?.subtitle ?? "";
+                                        print('title- $title');
+                                        print('subtitle - $subtitle');
+                                        print('pickupAddress - $pickupAddress');
+                                        // print(title);
+                                        // print(subtitle);
+                                        // print(pickupAddress);
 
                                         isShowAddressCard = true;
                                         suggestions.clear(); // hide list
@@ -237,7 +244,6 @@ class _SelectLocationMapScreenState extends State<SelectLocationMapScreen> {
                                             item.description;
                                       });
                                     }
-
                                     // 6️⃣ Reset session
                                     _mapService.resetSessionToken();
                                   },
@@ -292,7 +298,10 @@ class _SelectLocationMapScreenState extends State<SelectLocationMapScreen> {
               child: GestureDetector(
                 onTap: () {
                   widget.onSelectLocation!(
-                      selectedPosition, pickupAddress, title, subtitle);
+                      selectedPosition, pickupAddress, title, subtitle); 
+                  print('title- $title');
+                  print('subtitle - $subtitle');
+                  print('pickupAddress - $pickupAddress');
                   Navigator.pop(context);
                 },
                 child: Container(

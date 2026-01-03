@@ -13,6 +13,7 @@ class ApplyCouponsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final TextEditingController controller = TextEditingController();
     final bookProvider = context.read<BookRideProvider>();
 
     return CustomScaffold(
@@ -60,6 +61,7 @@ class ApplyCouponsScreen extends StatelessWidget {
                   children: [
                     Expanded(
                       child: TextField(
+                        controller: controller,
                         decoration: InputDecoration(
                           hintText: "Enter Coupons code",
                           hintStyle: textTheme.bodyMedium,
@@ -71,11 +73,21 @@ class ApplyCouponsScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-                    Text(
-                      "Apply",
-                      style: textTheme.titleMedium!.copyWith(
-                        color: AppColors.primaryColor,
-                        fontFamily: AppFonts.medium,
+                    TextButton(
+                      onPressed: () async {
+                        if (controller.text.isNotEmpty) {
+                          bookProvider.setCoupon(null, null, controller.text);
+                          print(bookProvider.selectedCoupon?.couponCode);
+                          bookProvider.getCalculatedPrice();
+                          Navigator.pop(context);
+                        }
+                      },
+                      child: Text(
+                        "Apply",
+                        style: textTheme.titleMedium!.copyWith(
+                          color: AppColors.primaryColor,
+                          fontFamily: AppFonts.medium,
+                        ),
                       ),
                     )
                   ],
@@ -104,7 +116,7 @@ class ApplyCouponsScreen extends StatelessWidget {
                           .paymentCouponState.data?.couponList[index];
                       return _couponCard(textTheme, context, () {
                         bookProvider.setCoupon(
-                            data?.title ?? '', data?.id?.toString() ?? "");
+                            data?.title ?? '', data?.id, null);
                         bookProvider.getCalculatedPrice();
                         Navigator.pop(context);
                       },

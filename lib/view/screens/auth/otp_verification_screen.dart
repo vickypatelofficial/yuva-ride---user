@@ -47,7 +47,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen>
   void initState() {
     super.initState();
 
-    pinController.text = widget.otp;
+    // pinController.text = widget.otp;
 
     fadeController = AnimationController(
       vsync: this,

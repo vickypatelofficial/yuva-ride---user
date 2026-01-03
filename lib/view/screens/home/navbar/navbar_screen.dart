@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import 'package:yuva_ride/services/local_storage.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_scaffold_utils.dart';
 import 'package:yuva_ride/utils/animations.dart';
 import 'package:yuva_ride/utils/app_colors.dart';
@@ -403,9 +404,10 @@ Future<void> showLogoutDialog(BuildContext context) {
                         ),
                       ),
                       onPressed: () {
+                        LocalStorage.clearLocalStorate();
                         Navigator.pushAndRemoveUntil(
                             context,
-                            AppAnimations.fade(LoginScreen()),
+                            AppAnimations.fade(const LoginScreen()),
                             (value) => false);
                       },
                       child: const Text(

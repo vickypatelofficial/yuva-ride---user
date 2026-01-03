@@ -189,3 +189,29 @@ String formatDate2(String isoDate) {
   final dateTime = DateTime.parse(isoDate).toLocal();
   return DateFormat('d MMMM yyyy').format(dateTime);
 }
+
+double toDoubleSafe(dynamic value, {double fallback = 0.0}) {
+  try {
+    if (value == null) return fallback;
+
+    // Already double
+    if (value is double) return value;
+
+    // int → double
+    if (value is int) return value.toDouble();
+
+    // String → double
+    if (value is String) {
+      final cleaned = value.trim();
+      if (cleaned.isEmpty) return fallback;
+
+      return double.tryParse(cleaned) ?? fallback;
+    }
+
+    // Any other type
+    return double.tryParse(value.toString()) ?? fallback;
+  } catch (_) {
+    return fallback;
+  }
+}
+

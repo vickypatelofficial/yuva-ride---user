@@ -1,3 +1,4 @@
+import 'dart:ffi';
 import 'dart:math';
 
 import 'package:auto_size_text/auto_size_text.dart';
@@ -10,6 +11,7 @@ import 'package:yuva_ride/main.dart';
 import 'package:yuva_ride/services/map_services.dart';
 import 'package:yuva_ride/services/status.dart';
 import 'package:yuva_ride/utils/constatns.dart';
+import 'package:yuva_ride/utils/globle_func.dart';
 import 'package:yuva_ride/view/custom_widgets/cusotm_back.dart';
 import 'package:yuva_ride/view/custom_widgets/cusotm_radio_container.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_button.dart';
@@ -43,8 +45,8 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
   late Animation<double> bounceAnim;
   final MapService mapService = MapService();
 
-  int selectedFare = 60;
-  List<int> fareOptions = [10, 20, 30, 40];
+  int selectedFare = 0;
+  List<int> fareOptions = [10, 20, 30];
 
   @override
   void initState() {
@@ -144,11 +146,8 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
               ),
               markers: mapService.markers,
               polylines: mapService.polylines,
-
               zoomControlsEnabled: false,
-              myLocationButtonEnabled: false,
-
-              /// 👇 MAIN LOGIC HERE
+              myLocationButtonEnabled: false ,
               onTap: (LatLng latLng) async {},
             ),
           ),
@@ -248,13 +247,30 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
                               final data = bookProvider
                                   .calculateState.data?.calDriver[index];
                               return _vehicleItem(
+                                arrivalTime: data?.driPicTime,
+                                isDriversAvailable:
+                                    data?.availableDrivers != null &&
+                                        data?.availableDrivers != 0,
                                 ontap: () {
-                                  bookProvider.setVehicle(
-                                      data?.id.toString() ?? '',
-                                      data?.dropPrice.toString() ?? '');
-                                  bookProvider.assignDriverId(data?.drivers);
-                                  if (kDebugMode) {
-                                    print(data?.drivers);
+                                  if (data?.availableDrivers != null &&
+                                      data?.availableDrivers != 0) {
+                                    bookProvider.setVehicle(
+                                        data?.id.toString() ?? '',
+                                        data?.pricing.baseFarePerUnit
+                                                .toString() ??
+                                            "",  data?.pricing.finalFare
+                                                .toString() ??
+                                            "");
+                                    bookProvider.assignDriverId(data?.drivers);
+                                    if (kDebugMode) {
+                                      print(data?.drivers);
+                                    }
+                                  } else {
+                                    showCustomToast(
+                                        title:
+                                            'No driver available for this vehicle',
+                                        backgroundColor: AppColors.red,
+                                        textColor: AppColors.white);
                                   }
                                 },
                                 isSelected: bookProvider.selectedVehicle?.id ==
@@ -262,9 +278,9 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
                                 text,
                                 icon: "assets/images/bike_book.png",
                                 title: data?.name ?? "",
-                                price: "₹${data?.finalPrice.toString() ?? ""}",
-                                cutPrice: data?.discount != null
-                                    ? "₹${data?.discount?.amount ?? ""}"
+                                price: "₹${data?.pricing.finalFare}",
+                                cutPrice: data?.pricing.discount != null
+                                    ? "₹${data?.pricing.baseFarePerUnit ?? ""}"
                                     : null,
                               );
                             })),
@@ -277,7 +293,128 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
             ),
             CustomButton(
               onPressed: () {
-                context.read<BookRideProvider>().changeFareNaviagate(true);
+                // print(context.read<BookRideProvider>().selectedCoupon?.id);
+                // print(context.read<BookRideProvider>().selectedCoupon?.couponCode);
+                // print(context.read<BookRideProvider>().selectedCoupon?.title);
+                // return;
+
+                if (context.read<BookRideProvider>().selectedVehicle?.id !=
+                        null &&
+                    (context
+                            .read<BookRideProvider>()
+                            .selectedVehicle
+                            ?.id
+                            .isNotEmpty ??
+                        false)){
+                          
+                  context.read<BookRideProvider>().changeFareNaviagate(true);
+                } else {
+                  showGeneralDialog(
+                    context: context,
+                    barrierDismissible: true,
+                    barrierLabel: "Select a vehicle",
+                    barrierColor: Colors.black.withOpacity(0.45),
+                    transitionDuration: const Duration(milliseconds: 300),
+                    pageBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    transitionBuilder: (context, animation, _, __) {
+                      final curved = CurvedAnimation(
+                          parent: animation, curve: Curves.easeOutBack);
+
+                      return ScaleTransition(
+                        scale: curved,
+                        child: FadeTransition(
+                          opacity: animation,
+                          child: Center(
+                            child: Container(
+                              width: 300,
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(24),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    blurRadius: 25,
+                                    offset: const Offset(0, 10),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  /// ICON
+                                  Container(
+                                    height: 56,
+                                    width: 56,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primaryColor
+                                          .withOpacity(0.12),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.directions_car_filled,
+                                      size: 28,
+                                      color: AppColors.primaryColor,
+                                    ),
+                                  ),
+
+                                  const SizedBox(height: 16),
+
+                                  /// TITLE
+                                  Text(
+                                    "Vehicle Required",
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.bold),
+                                  ),
+
+                                  const SizedBox(height: 8),
+
+                                  /// MESSAGE
+                                  Text(
+                                    "Please select a vehicle before continuing.",
+                                    textAlign: TextAlign.center,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(color: Colors.black54),
+                                  ),
+
+                                  const SizedBox(height: 22),
+
+                                  /// ACTION
+                                  GestureDetector(
+                                    onTap: () => Navigator.pop(context),
+                                    child: Container(
+                                      height: 44,
+                                      width: double.infinity,
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primaryColor,
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      child: Text(
+                                        "OK, Got it",
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyLarge
+                                            ?.copyWith(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                }
               },
               text: "Book a ride",
             ),
@@ -408,37 +545,263 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: fareOptions.map((value) {
-                bool isSelected = value == selectedFare;
-                return GestureDetector(
-                    onTap: () => setState(() => selectedFare = value),
-                    child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        height: 40,
-                        width: 70,
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? AppColors.primaryColor
-                              : Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
+                    bool isSelected = value == selectedFare;
+                    return GestureDetector(
+                        onTap: () => setState(() => selectedFare = value),
+                        child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            height: 40,
+                            width: 70,
+                            decoration: BoxDecoration(
                               color: isSelected
                                   ? AppColors.primaryColor
-                                  : Colors.grey.shade300),
-                          boxShadow: [
-                            if (isSelected)
-                              BoxShadow(
-                                  color: AppColors.primaryColor.withOpacity(.3),
-                                  blurRadius: 10)
-                          ],
-                        ),
-                        child: Center(
-                            child: Text(
-                          "+₹$value",
-                          style: text.titleMedium!.copyWith(
-                            color: isSelected ? Colors.white : Colors.black,
-                          ),
-                        ))));
-              }).toList(),
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                  color: isSelected
+                                      ? AppColors.primaryColor
+                                      : Colors.grey.shade300),
+                              boxShadow: [
+                                if (isSelected)
+                                  BoxShadow(
+                                      color: AppColors.primaryColor
+                                          .withOpacity(.3),
+                                      blurRadius: 10)
+                              ],
+                            ),
+                            child: Center(
+                                child: Text(
+                              "+₹$value",
+                              style: text.titleMedium!.copyWith(
+                                color: isSelected ? Colors.white : Colors.black,
+                              ),
+                            ))));
+                  }).toList() +
+                  [
+                    GestureDetector(
+                      onTap: () async {
+                        final TextEditingController controller =
+                            TextEditingController();
+
+                        await showDialog(
+                          context: context,
+                          barrierDismissible: true,
+                          barrierColor: Colors.black.withOpacity(0.45),
+                          builder: (context) {
+                            final text = Theme.of(context).textTheme;
+
+                            return Dialog(
+                              elevation: 0,
+                              backgroundColor: Colors.transparent,
+                              child: Container(
+                                width: 280,
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(26),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.18),
+                                      blurRadius: 25,
+                                      offset: const Offset(0, 10),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    /// ICON
+                                    Container(
+                                      height: 54,
+                                      width: 54,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primaryColor
+                                            .withOpacity(0.12),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.currency_rupee,
+                                        color: AppColors.primaryColor,
+                                        size: 28,
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 14),
+
+                                    /// TITLE
+                                    Text(
+                                      "Add Tip",
+                                      style: text.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 6),
+
+                                    /// SUBTITLE
+                                    Text(
+                                      "Add your tip for fastly ride book",
+                                      style: text.bodySmall
+                                          ?.copyWith(color: Colors.black54),
+                                    ),
+
+                                    const SizedBox(height: 18),
+
+                                    /// INPUT FIELD
+                                    Container(
+                                      height: 46,
+                                      width: 200,
+                                      alignment: Alignment.center,
+                                      child: TextField(
+                                        controller: controller,
+                                        keyboardType: TextInputType.number,
+                                        textAlign: TextAlign.center,
+                                        maxLength: 3,
+                                        inputFormatters: [
+                                          FilteringTextInputFormatter
+                                              .digitsOnly,
+                                          LengthLimitingTextInputFormatter(3),
+                                        ],
+                                        style: text.titleLarge?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 1.2,
+                                        ),
+                                        decoration: InputDecoration(
+                                          counterText: "",
+                                          hintText: "₹ 000",
+                                          hintStyle: text.titleMedium?.copyWith(
+                                              color: Colors.grey.shade400),
+                                          enabledBorder: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(14),
+                                            borderSide: BorderSide(
+                                              color: Colors.grey.shade300,
+                                              width: 1.5,
+                                            ),
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(14),
+                                            borderSide: const BorderSide(
+                                              color: AppColors.primaryColor,
+                                              width: 2,
+                                            ),
+                                          ),
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                                  vertical: 10),
+                                        ),
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 22),
+
+                                    /// ACTION BUTTONS
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: GestureDetector(
+                                            onTap: () => Navigator.pop(context),
+                                            child: Container(
+                                              height: 44,
+                                              alignment: Alignment.center,
+                                              decoration: BoxDecoration(
+                                                borderRadius:
+                                                    BorderRadius.circular(14),
+                                                border: Border.all(
+                                                    color:
+                                                        Colors.grey.shade300),
+                                              ),
+                                              child: Text(
+                                                "Cancel",
+                                                style: text.bodyMedium,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: GestureDetector(
+                                            onTap: () {
+                                              final value = int.tryParse(
+                                                  controller.text.trim());
+
+                                              if (value == null || value <= 0)
+                                                return;
+
+                                              Navigator.pop(context, value);
+                                            },
+                                            child: Container(
+                                              height: 44,
+                                              alignment: Alignment.center,
+                                              decoration: BoxDecoration(
+                                                borderRadius:
+                                                    BorderRadius.circular(14),
+                                                color: AppColors.primaryColor,
+                                              ),
+                                              child: Text(
+                                                "Add",
+                                                style:
+                                                    text.bodyMedium?.copyWith(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ).then((value) {
+                          if (value != null && mounted) {
+                            setState(() {
+                              selectedFare = value;
+                            });
+                          }
+                        });
+                      },
+                      child: Builder(builder: (context) {
+                        bool isSelected = !fareOptions.contains(selectedFare) &&
+                            selectedFare != 0;
+                        return AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            height: 40,
+                            width: 70,
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? AppColors.primaryColor
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                  color: isSelected
+                                      ? AppColors.primaryColor
+                                      : Colors.grey.shade300),
+                              boxShadow: [
+                                if (isSelected)
+                                  BoxShadow(
+                                      color: AppColors.primaryColor
+                                          .withOpacity(.3),
+                                      blurRadius: 10)
+                              ],
+                            ),
+                            child: Center(
+                                child: Text(
+                              !fareOptions.contains(selectedFare) &&
+                                      selectedFare != 0
+                                  ? '+₹$selectedFare'
+                                  : "Add",
+                              style: text.titleMedium!.copyWith(
+                                color: isSelected ? Colors.white : Colors.black,
+                              ),
+                            )));
+                      }),
+                    )
+                  ],
             ),
             const SizedBox(height: 20),
             _paymentBar(text),
@@ -449,16 +812,16 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
               return CustomButton(
                 isLoading: isStatusLoading(provider.rideCreateState.status),
                 onPressed: () async {
-                 
-                    await  provider.createRide(tip: selectedFare);
-                      provider.rideDetailState = ApiResponse.loading();
+                  await provider.createRide(tip: selectedFare);
+                  provider.rideDetailState = ApiResponse.loading();
                   if (isStatusSuccess(provider.rideCreateState.status)) {
                     // ignore: use_build_context_synchronously
                     Navigator.push(context,
                         AppAnimations.zoomOut(const PartnerOnTheWayScreen()));
                   }
                 },
-                text: "Book a ride",
+                text:
+                    "Book a ride for ₹${toDoubleSafe(provider.selectedVehicle?.discountPrice) + toDoubleSafe(selectedFare)}",
               );
             }),
           ],
@@ -563,7 +926,9 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
       required String title,
       required String price,
       required bool isSelected,
+      String? arrivalTime,
       String? cutPrice,
+      required bool isDriversAvailable,
       required VoidCallback ontap}) {
     return Padding(
       padding: const EdgeInsets.all(4.0),
@@ -572,7 +937,9 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         elevation: 1,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isDriversAvailable
+              ? AppColors.white
+              : AppColors.white.withOpacity(.8),
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
@@ -589,9 +956,13 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("Arrival in 2mins",
-                      style: text.labelMedium!
-                          .copyWith(color: AppColors.success, fontSize: 13)),
+                  isDriversAvailable
+                      ? Text("Arrival in ${arrivalTime ?? ""}",
+                          style: text.labelMedium!
+                              .copyWith(color: AppColors.success, fontSize: 13))
+                      : Text("No available drivers",
+                          style: text.labelMedium!
+                              .copyWith(color: AppColors.red, fontSize: 13)),
                   Text(title,
                       style: text.titleMedium!
                           .copyWith(fontFamily: AppFonts.semiBold)),
@@ -840,16 +1211,13 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           /// ---------------- CASH BUTTON ----------------
-          _paymentButton(
-            context,
-            icon: "assets/images/cash.png",
-            label: context.read<BookRideProvider>().selectedPayment?.title ??
-                "Cash",
-            onTap: () {
-              Navigator.push(
-                  context, AppAnimations.fade(const ChoosePaymentModeScreen()));
-            },
-          ),
+          _paymentButton(context,
+              icon: "assets/images/cash.png",
+              label: context.read<BookRideProvider>().selectedPayment?.title ??
+                  "Cash", onTap: () {
+            Navigator.push(
+                context, AppAnimations.fade(const ChoosePaymentModeScreen()));
+          }),
           _verticalDivider(),
 
           /// ---------------- OFFERS BUTTON ----------------
@@ -858,11 +1226,8 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
             icon: "assets/images/offer.png",
             label: (context.read<BookRideProvider>().selectedCoupon?.title !=
                         null) &&
-                    (context
-                        .read<BookRideProvider>()
-                        .selectedCoupon!
-                        .title
-                        .isNotEmpty)
+                    (context.read<BookRideProvider>().selectedCoupon?.title !=
+                        null)
                 ? context.read<BookRideProvider>().selectedCoupon?.title ?? ''
                 : "Offers",
             onTap: () {
@@ -873,17 +1238,19 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
           _verticalDivider(),
 
           /// ---------------- MY SELF BUTTON ----------------
+
           _paymentButton(
             context,
             icon: "assets/images/user.png",
-            label: ((context.read<BookRideProvider>().selectedContact?.isSelf ==
+            label: ((context.read<BookRideProvider>().selectedContact ==
                         null) ||
                     (context.read<BookRideProvider>().selectedContact?.isSelf ??
                         true))
                 ? "My Self"
-                : context.read<BookRideProvider>().selectedContact?.name ??
-                    "My Self",
+                : context.read<BookRideProvider>().selectedContact?.name ?? "",
             onTap: () {
+              print(context.read<BookRideProvider>().selectedContact?.isSelf);
+              print(context.read<BookRideProvider>().selectedContact?.name);
               _showRideForSomeoneSheet(context);
             },
           ),
@@ -1128,10 +1495,8 @@ void _showRideForSomeoneSheet(BuildContext context) {
                         color: Colors.black54, size: 18)
                   ],
                 ),
-              ),
-
-              const SizedBox(height: 18),
-
+              ), 
+              const SizedBox(height: 18), 
               /// SAVE BUTTON
               SizedBox(
                 width: double.infinity,
@@ -1154,8 +1519,7 @@ void _showRideForSomeoneSheet(BuildContext context) {
                     ),
                   ),
                 ),
-              ),
-
+              ), 
               const SizedBox(height: 12),
             ],
           );
