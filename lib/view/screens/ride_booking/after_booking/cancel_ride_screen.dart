@@ -106,7 +106,7 @@ class _CancelRideReasonScreenState extends State<CancelRideReasonScreen> {
                           // bookRideProvider.rideDetailState.data?.cartTableId ??
                           //     bookRideProvider
                           //         .rideDetailState.data?.requestTableId ??
-                              bookRideProvider.getActiveRideRequestId(),
+                          bookRideProvider.getActiveRideRequestId(),
                       lat: bookRideProvider.pickupLocation?.latLng.latitude
                               .toString() ??
                           '',
@@ -116,7 +116,12 @@ class _CancelRideReasonScreenState extends State<CancelRideReasonScreen> {
                   if (isStatusSuccess(
                       bookRideProvider.cancelRideState.status)) {
                     // ignore: use_build_context_synchronously
-                    Navigator.pop(context);
+                    Navigator.pushAndRemoveUntil(
+                        // ignore: use_build_context_synchronously
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const HomeScreen()),
+                        (_) => false);
                   }
                 },
                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -149,14 +154,6 @@ class _CancelRideReasonScreenState extends State<CancelRideReasonScreen> {
           const SizedBox(height: 20),
         ],
       ),
-    );
-  }
-
-  Widget _roundIcon(IconData icon, {bool white = false}) {
-    return CircleAvatar(
-      backgroundColor: Colors.white.withOpacity(.3),
-      radius: 18,
-      child: Icon(icon, color: white ? Colors.white : Colors.black),
     );
   }
 }

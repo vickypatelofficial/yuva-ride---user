@@ -15,7 +15,6 @@ import 'package:yuva_ride/services/map_services.dart';
 import 'package:yuva_ride/utils/animations.dart';
 import 'package:yuva_ride/utils/app_colors.dart';
 import 'package:yuva_ride/view/screens/home/navbar/navbar_screen.dart';
-import 'dart:ui' as ui;
 
 import 'package:yuva_ride/view/screens/ride_booking/book_ride/selection_location_book_screen.dart';
 import 'package:yuva_ride/view/screens/ride_sharing/share_ride/selection_location_share_screen.dart';
@@ -370,9 +369,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   //         ?.copyWith(color: Colors.white),
                   //   ),
                   // ),
-                  SizedBox(height: 20,),
-
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 20),
 
                   // Title + Arrow
                   Padding(

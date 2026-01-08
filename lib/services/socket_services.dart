@@ -44,16 +44,15 @@ class SocketService {
   }
 
   // listen event
-void on(String event, Function(dynamic data) callback) {
-  print("🎧 LISTEN CALLED for event → $event");
-  _socket?.off(event);
-  _socket?.on(event, (data) {
-    print("📥 EVENT HIT → $event");
-    print("📦 DATA → $data");
-    callback(data);
-  });
-}
-
+  void on(String event, Function(dynamic data) callback) {
+    print("🎧 LISTEN CALLED for event → $event");
+    _socket?.off(event);
+    _socket?.on(event, (data) {
+      print("📥 EVENT HIT → $event");
+      print("📦 DATA → $data");
+      callback(data);
+    });
+  }
 
   // emit event
   void emit(String event, dynamic data) {

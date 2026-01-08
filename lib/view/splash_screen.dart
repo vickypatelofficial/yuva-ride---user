@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:yuva_ride/provider/book_ride_provider.dart';
 import 'package:yuva_ride/services/local_storage.dart';
+import 'package:yuva_ride/services/status.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_scaffold_utils.dart';
 import 'package:yuva_ride/utils/animations.dart';
 import 'package:yuva_ride/utils/app_colors.dart';
 import 'package:yuva_ride/view/screens/auth/signup_screen.dart';
 import 'package:yuva_ride/view/screens/home/home_screen.dart';
 import 'package:yuva_ride/view/screens/onboarding_screen.dart';
+import 'package:yuva_ride/view/screens/ride_booking/after_booking/partener_on_the_way_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -84,13 +88,28 @@ class _SplashScreenState extends State<SplashScreen>
                   transitionDuration: const Duration(milliseconds: 2300)));
         });
       } else {
-        Future.microtask(() {
-          Navigator.pushReplacement(
-              // ignore: use_build_context_synchronously
-              context,
-              AppAnimations.fade(const HomeScreen(),
-                  transitionDuration: const Duration(milliseconds: 2300)));
-        });
+        // ignore: use_build_context_synchronously
+        // await context
+        //     .read<BookRideProvider>()
+        //     .rideDetail(requestId: '271', driverId: '225');
+        // if (isStatusSuccess(
+        //     // ignore: use_build_context_synchronously
+        //     context.read<BookRideProvider>().rideDetailState.status)) {
+        //   Future.microtask(() {
+        //     Navigator.pushReplacement(
+        //         // ignore: use_build_context_synchronously
+        //         context,
+        //         AppAnimations.fade(const PartnerOnTheWayScreen(),
+        //             transitionDuration: const Duration(milliseconds: 2300)));
+        //   });
+        // } else
+          Future.microtask(() {
+            Navigator.pushReplacement(
+                // ignore: use_build_context_synchronously
+                context,
+                AppAnimations.fade(const HomeScreen(),
+                    transitionDuration: const Duration(milliseconds: 2300)));
+          });
       }
     }
   }

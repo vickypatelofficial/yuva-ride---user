@@ -14,6 +14,8 @@ void main() {
 double screenHeight = 0;
 double screenWidth = 0;
 
+final navigatorKey = GlobalKey<NavigatorState>();
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
   @override
@@ -31,6 +33,7 @@ class MyApp extends StatelessWidget {
           theme: RAppTheme.lightTheme,
           darkTheme: RAppTheme.darkTheme,
           themeMode: ThemeMode.system,
+          navigatorKey: navigatorKey,
           debugShowCheckedModeBanner: false,
           title: 'Yuva Ride User',
           home: const SplashScreen()),

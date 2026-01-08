@@ -152,7 +152,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen>
                 //     AndroidSmsAutofillMethod.smsRetrieverApi,
                 // listenForMultipleSmsOnAndroid: true,
 
-                defaultPinTheme: defaultPinTheme,
+                defaultPinTheme: defaultPinTheme  ,
                 focusedPinTheme: focusedPinTheme,
                 submittedPinTheme: submittedPinTheme,
 
@@ -230,7 +230,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen>
                         print(provider.verifyOtpState.data.toString());
                         String? userId;
                         if (provider.verifyOtpState.data['user_id'] != null) {
-                          userId = provider.verifyOtpState.data['user_id'];
+                          userId = provider.verifyOtpState.data?['user_id']?.toString();
                         } else {
                           userId = provider
                                   .verifyOtpState.data['customer_data']?['id']
@@ -249,8 +249,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen>
                             // ignore: use_build_context_synchronously
                             context,
                             AppAnimations.fade(
-                              const HomeScreen(),
-                              transitionDuration:
+                              const HomeScreen(),  transitionDuration:
                                   const Duration(milliseconds: 2300),
                             ),
                             (value) => false,

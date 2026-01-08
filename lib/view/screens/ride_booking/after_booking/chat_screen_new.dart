@@ -29,12 +29,6 @@ class _ChatScreenNewState extends State<ChatScreenNew> {
   late IO.Socket socket;
   late ColorNotifier notifier;
 
-  // ---------------- DARK MODE ----------------
-  getDarkMode() async {
-    final prefs = await SharedPreferences.getInstance();
-    notifier.setIsDark = prefs.getBool("setIsDark") ?? false;
-  }
-
   @override
   void initState() {
     super.initState();
@@ -62,19 +56,56 @@ class _ChatScreenNewState extends State<ChatScreenNew> {
   }
 
   void _connectSocket() {
-    socket.onConnect((_) => debugPrint("User Socket Connected"));
+    socket.onConnect((_) {
+      debugPrint("✅ User Socket Connected");
+
+      /// 🔴 JOIN CUSTOMER ROOM (as per guide)
+      socket.emit(
+        'join_customer_room',
+        {
+          "customer_id": widget.userId.toString(),
+        },
+      );
+
+      debugPrint(
+        "🟢 Joined room: customer_${widget.userId}",
+      );
+    });
+
+    socket.onAny((event, data) {
+      debugPrint(
+        "📡 SOCKET EVENT → $event | DATA → $data",
+      );
+    });
+
+    socket.onDisconnect((_) {
+      debugPrint("⚠️ User Socket Disconnected");
+    });
+
+    socket.onConnectError((e) {
+      debugPrint("❌ Socket Error: $e");
+    });
+
     socket.onDisconnect((_) => debugPrint("User Socket Disconnected"));
     socket.onConnectError((e) => debugPrint("Socket Error: $e"));
-    socket.on("New_Chat${widget.userId}", (_) {
+    socket.on("New_Chat${widget.userId}", (_) async {
+      // if (!mounted) return;
+      await Future.delayed(const Duration(seconds: 0));
       context.read<ChatProvider>().getChat(recieverId: widget.driverId);
     });
+  }
+
+  // ---------------- DARK MODE ----------------
+  getDarkMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    notifier.setIsDark = prefs.getBool("setIsDark") ?? false;
   }
 
   // ---------------- SEND MESSAGE ----------------
   void sendMessage() {
     print('+++++++++++++++++++');
     print(messageController.text.trim().isEmpty);
-    print( {
+    print({
       'sender_id': widget.userId,
       'recevier_id': widget.driverId,
       'status': "customer",
@@ -87,8 +118,16 @@ class _ChatScreenNewState extends State<ChatScreenNew> {
       'status': "customer",
       'message': messageController.text.trim()
     });
-    
+
     messageController.clear();
+  }
+
+  @override
+  void dispose() {
+    socket.off("New_Chat${widget.userId}");
+    socket.disconnect();
+    socket.dispose();
+    super.dispose();
   }
 
   @override
@@ -99,12 +138,12 @@ class _ChatScreenNewState extends State<ChatScreenNew> {
 
     return Scaffold(
       backgroundColor: notifier.background,
-      appBar: AppBar( 
+      appBar: AppBar(
         elevation: 0,
         backgroundColor: AppColors.primaryColor,
         leading: IconButton(
-          icon:const Icon(Icons.arrow_back, color: AppColors.white),
-            onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back, color: AppColors.white),
+          onPressed: () => Navigator.pop(context),
           // onPressed: () {
           //   context.read<ChatProvider>().getChat(recieverId: widget.driverId);
           // },
@@ -112,7 +151,7 @@ class _ChatScreenNewState extends State<ChatScreenNew> {
         title: !isStatusLoading(chatProvider.chatListState.status)
             ? Text(
                 chatProvider.chatListState.data?.userData.firstName ?? '',
-                style:const TextStyle(color:  AppColors.white),
+                style: const TextStyle(color: AppColors.white),
               )
             : const SizedBox(),
       ),
@@ -127,7 +166,7 @@ class _ChatScreenNewState extends State<ChatScreenNew> {
                       controller: _controller,
                       child: Column(
                         children: chatProvider.chatListState.data!.chatList
-                            .map((day){
+                            .map((day) {
                           return Column(
                             children: [
                               const SizedBox(height: 10),
@@ -209,15 +248,15 @@ class _ChatScreenNewState extends State<ChatScreenNew> {
         child: Padding(
           padding: const EdgeInsets.all(10),
           child: TextField(
-            controller: messageController, 
+            controller: messageController,
             decoration: InputDecoration(
-              contentPadding:const EdgeInsets.only(top: 10),
+              contentPadding: const EdgeInsets.only(top: 10),
               filled: true,
               fillColor: notifier.containerColor,
               hintText: "Say Something...",
               suffixIcon: IconButton(
                 icon: Icon(Icons.send, color: notifier.textColor),
-                onPressed: (){
+                onPressed: () {
                   sendMessage();
                   chatProvider.getChat(recieverId: widget.driverId);
                 },

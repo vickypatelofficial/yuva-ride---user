@@ -3,11 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yuva_ride/main.dart';
+import 'package:yuva_ride/models/ride_detail_model.dart';
 import 'package:yuva_ride/provider/book_ride_provider.dart';
 import 'package:yuva_ride/services/local_storage.dart';
 import 'package:yuva_ride/services/map_services.dart';
 import 'package:yuva_ride/services/status.dart';
 import 'package:yuva_ride/utils/app_urls.dart';
+import 'package:yuva_ride/utils/globle_func.dart';
 import 'package:yuva_ride/view/custom_widgets/cusotm_back.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_scaffold_utils.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -15,9 +17,7 @@ import 'package:yuva_ride/utils/animations.dart';
 import 'package:yuva_ride/utils/app_colors.dart';
 import 'package:yuva_ride/utils/app_fonts.dart';
 import 'package:yuva_ride/view/screens/ride_booking/after_booking/cancel_ride_screen.dart';
-import 'package:yuva_ride/view/screens/ride_booking/after_booking/chat_screen.dart';
 import 'package:yuva_ride/view/screens/ride_booking/after_booking/chat_screen_new.dart';
-import 'package:yuva_ride/view/screens/ride_booking/after_booking/ride_completed_screen.dart';
 import 'package:yuva_ride/view/screens/ride_booking/after_booking/widgets/ripple_loader.dart';
 import 'package:yuva_ride/view/screens/ride_booking/after_booking/widgets/shimmer_card_driver.dart';
 
@@ -29,7 +29,6 @@ class PartnerOnTheWayScreen extends StatefulWidget {
 }
 
 class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
-  GoogleMapController? mapController;
   Timer? rideTimer;
 
   int elapsedSeconds = 0;
@@ -37,6 +36,8 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
   @override
   void initState() {
     super.initState();
+
+    _startPopupTimer(context);
     // startRideTimer();
   }
 
@@ -48,6 +49,118 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
         elapsedSeconds++;
       });
     });
+  }
+
+  Timer? _popupTimer;
+
+  void _startPopupTimer(BuildContext context) {
+    _popupTimer = Timer(const Duration(minutes: 1), () {
+      if (context.read<BookRideProvider>().rideDetailState.data?.cartTableId ==
+              null ||
+          (context.read<BookRideProvider>().rideDetailState.data?.cartTableId ??
+                      '')
+                  .isEmpty &&
+              mounted) {
+        Future.delayed(const Duration(seconds: 1), () {
+          showAddMoreTipDialog(context: navigatorKey.currentContext!);
+        });
+        Navigator.maybePop(context);
+      } else {
+        _stopPopupTimer();
+      }
+    });
+  }
+
+  void showAddMoreTipDialog({
+    required BuildContext context,
+  }) {
+    if (!context.mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) {
+        return Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              width: MediaQuery.of(context).size.width * 0.85,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(22),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.12),
+                    blurRadius: 18,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Stack(
+                children: [
+                  // 🧾 Content
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(height: 10),
+                      const Text(
+                        "Want faster ride acceptance?",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      const Text(
+                        "Adding a small extra tip may help drivers accept your ride sooner.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.black54,
+                          height: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 22),
+
+                      // ✅ OK Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 44,
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.maybePop(context),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primaryColor,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: const Text(
+                            "Okay",
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: AppColors.white,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _stopPopupTimer() {
+    _popupTimer?.cancel();
+    _popupTimer = null;
   }
 
   @override
@@ -137,8 +250,9 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
                       onMapCreated: (c) {
                         bookRideProvider.mapService.initController(c);
                       },
-                      initialCameraPosition: const CameraPosition(
-                        target: LatLng(17.4065, 78.4772),
+                      initialCameraPosition: CameraPosition(
+                        target: bookRideProvider.pickupLocation?.latLng ??
+                            const LatLng(17.4065, 78.4772),
                         zoom: 14.5,
                       ),
                       markers: bookRideProvider.mapService.markers,
@@ -175,14 +289,19 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
                               bookRideProvider.driverProfileState.status)
                           ? Column(
                               children: [
-                                Padding(
-                                  padding: const EdgeInsets.only(
-                                      left: 20, right: 20),
-                                  child: Text(
-                                    "Matching with your rider… don't go anywhere...",
-                                    style: text.titleMedium!.copyWith(
-                                        fontFamily: AppFonts.bold,
-                                        fontSize: 17),
+                                InkWell(
+                                  onTap: () {
+                                    showAddMoreTipDialog(context: context);
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(
+                                        left: 20, right: 20),
+                                    child: Text(
+                                      "Matching with your rider… don't go anywhere...",
+                                      style: text.titleMedium!.copyWith(
+                                          fontFamily: AppFonts.bold,
+                                          fontSize: 17),
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(height: 12),
@@ -200,14 +319,24 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
                                               ?.requestData?.status !=
                                           '2')) {
                                     return SizedBox(
-                                      child: Text(bookRideProvider
-                                              .rideDetailState
-                                              .data
-                                              ?.requestData
-                                              ?.status
-                                              .toString() ??
-                                          ''),
-                                    );
+                                        // child: Text(bookRideProvider
+                                        //         .rideDetailState
+                                        //         .data
+                                        //         ?.requestData
+                                        //         ?.id
+                                        //         .toString() ??
+                                        //     ''
+                                        //     ),
+                                        // child: Text
+                                        // (
+                                        //   bookRideProvider
+                                        //         .rideDetailState
+                                        //         .data
+                                        //         ?.requestData
+                                        //         ?.status
+                                        //         .toString() ??
+                                        //     ''),
+                                        );
                                   }
                                   return Container(
                                     padding: const EdgeInsets.all(14),
@@ -271,26 +400,38 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           ClipRRect(
-                                            borderRadius: BorderRadius.circular(12),
-                                            child: Image.network(
-                                              AppUrl.imageUrl +
-                                                  (bookRideProvider
-                                                          .driverProfileState
-                                                          .data
-                                                          ?.dDetail
-                                                          ?.profileImage ??
-                                                      ''),
-                                              height: 60,
-                                              width: 60,
-                                              fit: BoxFit.cover,
-                                              errorBuilder:
-                                                  (context, error, stackTrace) {
-                                                return Image.asset(
-                                                  "assets/images/driver.png",
-                                                  height: 60,
-                                                  width: 60,
-                                                );
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            child: InkWell(
+                                              onTap: () {
+                                                print(AppUrl.imageUrl +
+                                                    (bookRideProvider
+                                                            .driverProfileState
+                                                            .data
+                                                            ?.dDetail
+                                                            ?.profileImage ??
+                                                        ''));
                                               },
+                                              child: Image.network(
+                                                AppUrl.imageUrl +
+                                                    (bookRideProvider
+                                                            .driverProfileState
+                                                            .data
+                                                            ?.dDetail
+                                                            ?.profileImage ??
+                                                        ''),
+                                                height: 60,
+                                                width: 60,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (context, error,
+                                                    stackTrace) {
+                                                  return Image.asset(
+                                                    "assets/images/driver.png",
+                                                    height: 60,
+                                                    width: 60,
+                                                  );
+                                                },
+                                              ),
                                             ),
                                           ),
                                           const SizedBox(width: 14),
@@ -299,7 +440,12 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
                                                 CrossAxisAlignment.start,
                                             children: [
                                               Text(
-                                                "TS26QR8833",
+                                                bookRideProvider
+                                                        .driverProfileState
+                                                        .data
+                                                        ?.dDetail
+                                                        ?.vehicleNumber ??
+                                                    '',
                                                 style:
                                                     text.titleMedium!.copyWith(
                                                   fontFamily: AppFonts.medium,
@@ -341,14 +487,26 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
                                       Row(
                                         children: [
                                           /// CALL ICON BUTTON
-                                          Container(
-                                            padding: const EdgeInsets.all(10),
-                                            decoration: BoxDecoration(
-                                              color: Colors.grey.shade100,
-                                              shape: BoxShape.circle,
+                                          InkWell(
+                                            borderRadius:
+                                                BorderRadius.circular(30),
+                                            onTap: () {
+                                              openDialer(bookRideProvider
+                                                      .driverProfileState
+                                                      .data
+                                                      ?.dDetail
+                                                      ?.primaryPhoneNo ??
+                                                  '');
+                                            },
+                                            child: Container(
+                                              padding: const EdgeInsets.all(10),
+                                              decoration: BoxDecoration(
+                                                color: Colors.grey.shade100,
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: const Icon(Icons.call,
+                                                  size: 20),
                                             ),
-                                            child: const Icon(Icons.call,
-                                                size: 20),
                                           ),
 
                                           const SizedBox(width: 12),
@@ -390,13 +548,17 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
                                                             .chat_bubble_outline,
                                                         size: 18),
                                                     const SizedBox(width: 8),
-                                                    Text(
-                                                      "Message suresh Kumar",
-                                                      style: text.bodyMedium!
-                                                          .copyWith(
-                                                        color: Colors.black87,
-                                                        fontFamily:
-                                                            AppFonts.medium,
+                                                    Expanded(
+                                                      child: Text(
+                                                        "Message ${bookRideProvider.driverProfileState.data?.dDetail?.firstName} ${bookRideProvider.driverProfileState.data?.dDetail?.lastName}",
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                        style: text.bodyMedium!
+                                                            .copyWith(
+                                                          color: Colors.black87,
+                                                          fontFamily:
+                                                              AppFonts.medium,
+                                                        ),
                                                       ),
                                                     ),
                                                   ],
@@ -412,10 +574,10 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
                               ],
                             ),
                       const SizedBox(height: 12),
-                      _rideDetails(text),
+                      _rideDetails(text, bookRideProvider),
                       const SizedBox(height: 12),
-                      _partnerDetails(text),
-                      const SizedBox(height: 12),
+                      // _partnerDetails(text),
+                      // const SizedBox(height: 12),
                       _paymentSection(text),
                       const SizedBox(height: 30),
                       Padding(
@@ -457,111 +619,6 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
           ],
         );
       }),
-    );
-  }
-
-  Widget _rideDetails(TextTheme text) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      margin: const EdgeInsets.symmetric(horizontal: 18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(.05),
-            blurRadius: 12,
-            offset: const Offset(0, 3),
-          )
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Ride Details",
-            style: text.titleMedium!.copyWith(fontFamily: AppFonts.medium),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ---------------- LEFT SIDE COLUMN ----------------
-              Column(
-                children: [
-                  // Green dot
-                  Container(
-                    height: 16,
-                    width: 16,
-                    decoration: const BoxDecoration(
-                        color: Colors.green,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(color: Colors.green, blurRadius: 7)
-                        ]),
-                  ),
-
-                  const SizedBox(height: 4),
-
-                  // Vertical line
-                  Container(
-                    height: 35,
-                    width: 2,
-                    color: Colors.black,
-                  ),
-
-                  const SizedBox(height: 4),
-
-                  // Red dot
-                  Container(
-                    height: 16,
-                    width: 16,
-                    decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(color: Colors.red, blurRadius: 7)
-                        ]),
-                  ),
-                ],
-              ),
-
-              const SizedBox(width: 14),
-
-              // ---------------- RIGHT SIDE TEXT ----------------
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Pickup
-                    Text(
-                      "9-120, Madhapur metro station,\nHyderabad",
-                      style: text.bodyLarge,
-                    ),
-
-                    const SizedBox(height: 6),
-
-                    // Divider (aligned to text)
-                    Container(
-                      height: 1,
-                      width: double.infinity,
-                      color: Colors.grey.shade300,
-                    ),
-
-                    const SizedBox(height: 6),
-
-                    // Drop
-                    Text(
-                      "9-120, Hitech metro station,\nHyderabad",
-                      style: text.bodyLarge,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 
@@ -682,24 +739,27 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
   // PAYMENT
   // ---------------------------------------------------------
   Widget _paymentSection(TextTheme text) {
+    final bookRideProvider = context.read<BookRideProvider>();
     return InkWell(
         onTap: () {
-          showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            backgroundColor: Colors.transparent,
-            builder: (context) {
-              final text = Theme.of(context).textTheme;
-              return paymentSuccessBottomSheet(context, text);
-            },
-          );
-          Future.delayed(const Duration(seconds: 3), () {
-            Navigator.pop(context);
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const RideCompletedScreen()),
-            );
-          });
+          // bookRideProvider.createRazorpayOrder(
+          //     rideOrderId: '640', amount: '19.5');
+          // showModalBottomSheet(
+          //   context: context,
+          //   isScrollControlled: true,
+          //   backgroundColor: Colors.transparent,
+          //   builder: (context) {
+          //     final text = Theme.of(context).textTheme;
+          //     return paymentSuccessBottomSheet(context, text, bookRideProvider);
+          //   },
+          // );
+          // Future.delayed(const Duration(seconds: 3), () {
+          //   Navigator.pop(context);
+          //   Navigator.push(
+          //     context,
+          //     MaterialPageRoute(builder: (_) => const RideCompletedScreen()),
+          //   );
+          // });
         },
         child: Container(
           padding: const EdgeInsets.all(14),
@@ -718,15 +778,21 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("Payment",
-                  style: text.titleMedium!
-                      .copyWith(fontFamily: AppFonts.semiBold)),
+              InkWell(
+                onTap: () {
+                  bookRideProvider.emitPaymentSuccess();
+                },
+                child: Text("Payment",
+                    style: text.titleMedium!
+                        .copyWith(fontFamily: AppFonts.semiBold)),
+              ),
               const SizedBox(height: 10),
               Row(
                 children: [
                   Text("Price", style: text.bodyMedium),
                   const Spacer(),
-                  Text("₹45",
+                  Text(
+                      "₹${bookRideProvider.rideDetailState.data?.requestData?.finalPrice ?? ''}",
                       style: text.titleMedium!
                           .copyWith(fontFamily: AppFonts.medium)),
                 ],
@@ -742,19 +808,28 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text("Pay After Ride",
-                            style: text.bodyMedium!
-                                .copyWith(fontFamily: AppFonts.medium)),
-                        const SizedBox(
-                          height: 5,
-                        ),
-                        Text("Pay with cash/ Qr code",
-                            style: text.bodyMedium!.copyWith(
-                                fontFamily: AppFonts.medium, fontSize: 10)),
-                      ],
+                    InkWell(
+                      onTap: () {
+                        // showPaymentDialog(navigatorKey.currentContext!,
+                        //     onYes: () {},
+                        //     price:
+                        //         '${bookRideProvider.rideDetailState.data?.requestData?.finalPrice}',
+                        //     onNo: () {});
+                      },
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("Pay After Ride",
+                              style: text.bodyMedium!
+                                  .copyWith(fontFamily: AppFonts.medium)),
+                          const SizedBox(
+                            height: 5,
+                          ),
+                          Text("Pay with Cash/Online",
+                              style: text.bodyMedium!.copyWith(
+                                  fontFamily: AppFonts.medium, fontSize: 10)),
+                        ],
+                      ),
                     ),
                     const Icon(Icons.check_circle,
                         color: AppColors.primaryColor, size: 26),
@@ -764,87 +839,6 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
             ],
           ),
         ));
-  }
-
-  Widget paymentSuccessBottomSheet(BuildContext context, TextTheme text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          /// SUCCESS ICON
-          Image.asset(
-            "assets/images/successfully.png",
-            height: 60,
-          ),
-
-          const SizedBox(height: 12),
-
-          /// TITLE
-          Text(
-            "Successfully paid ₹65",
-            style: text.titleMedium!.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-          ),
-
-          const SizedBox(height: 20),
-
-          /// PAYMENT BREAKUP
-          Column(
-            children: [
-              _amountRow("Ride far", "₹45", text),
-              _amountRow("Coupon", "₹0", text),
-              _amountRow("Ride charge", "₹10", text),
-              _amountRow("Wallet", "-₹10", text),
-              const SizedBox(height: 6),
-              Divider(color: Colors.grey.shade300),
-              const SizedBox(height: 6),
-              _amountRow("Amount to be paid", "₹45", text, isBold: true),
-            ],
-          ),
-
-          const SizedBox(height: 22),
-
-          /// RIDE DETAILS CARD
-          _rideDetails(text),
-
-          const SizedBox(height: 20),
-        ],
-      ),
-    );
-  }
-
-  /// ONE ROW FOR AMOUNT ITEMS
-  Widget _amountRow(String title, String value, TextTheme text,
-      {bool isBold = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Text(
-            title,
-            style: text.bodyMedium!.copyWith(
-              color: Colors.black87,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-          const Spacer(),
-          Text(
-            value,
-            style: text.bodyMedium!.copyWith(
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 
@@ -893,4 +887,305 @@ class TripAndDistanceCard extends StatelessWidget {
       ),
     );
   }
+}
+
+void showPaymentDialog(
+  BuildContext context, {
+  required VoidCallback onYes,
+  required String price,
+  required VoidCallback onNo,
+}) {
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) {
+      return Center(
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            width: 300,
+            padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 22),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 20,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 10),
+                Text(
+                  "You have to pay the rupees $price",
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    color: Colors.black,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 30),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    // YES BUTTON (ORANGE)
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pop(context);
+                        onYes();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 12, horizontal: 35),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryColor,
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: const Text(
+                          "Pay",
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // NO BUTTON (OUTLINE)
+                    // GestureDetector(
+                    //   onTap: () {
+                    //     onNo();
+                    //   },
+                    //   child: Container(
+                    //     padding: const EdgeInsets.symmetric(
+                    //         vertical: 12, horizontal: 35),
+                    //     decoration: BoxDecoration(
+                    //       color: Colors.white,
+                    //       borderRadius: BorderRadius.circular(30),
+                    //       border: Border.all(
+                    //           color: AppColors.primaryColor, width: 2),
+                    //     ),
+                    //     child: const Text(
+                    //       "No",
+                    //       style: TextStyle(
+                    //         fontSize: 15,
+                    //         color: AppColors.primaryColor,
+                    //         fontWeight: FontWeight.bold,
+                    //       ),
+                    //     ),
+                    //   ),
+                    // ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+Widget paymentSuccessBottomSheet(
+    BuildContext context, TextTheme text, BookRideProvider bookRideProvider) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+    decoration: const BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+    ),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        /// SUCCESS ICON
+        Image.asset(
+          "assets/images/successfully.png",
+          height: 60,
+        ),
+
+        const SizedBox(height: 12),
+
+        /// TITLE
+        Text(
+          "Successfully paid ₹65",
+          style: text.titleMedium!.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
+
+        const SizedBox(height: 20),
+
+        /// PAYMENT BREAKUP
+        Column(
+          children: [
+            _amountRow(
+                "Ride far",
+                "₹${bookRideProvider.rideDetailState.data?.requestData?.price}",
+                text),
+            _amountRow("Coupon", "₹0", text),
+            _amountRow("Ride charge", "0", text),
+            _amountRow("Wallet", "₹0", text),
+            const SizedBox(height: 6),
+            Divider(color: Colors.grey.shade300),
+            const SizedBox(height: 6),
+            _amountRow(
+                "Amount to be paid",
+                "₹${bookRideProvider.rideDetailState.data?.requestData?.finalPrice}",
+                text,
+                isBold: true),
+          ],
+        ),
+
+        const SizedBox(height: 22),
+
+        /// RIDE DETAILS CARD
+        _rideDetails(text, bookRideProvider),
+
+        const SizedBox(height: 20),
+      ],
+    ),
+  );
+}
+
+/// ONE ROW FOR AMOUNT ITEMS
+Widget _amountRow(String title, String value, TextTheme text,
+    {bool isBold = false}) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: Row(
+      children: [
+        Text(
+          title,
+          style: text.bodyMedium!.copyWith(
+            color: Colors.black87,
+            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+        const Spacer(),
+        Text(
+          value,
+          style: text.bodyMedium!.copyWith(
+            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _rideDetails(TextTheme text, BookRideProvider bookRideProvider) {
+  return Container(
+    padding: const EdgeInsets.all(14),
+    margin: const EdgeInsets.symmetric(horizontal: 18),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(.05),
+          blurRadius: 12,
+          offset: const Offset(0, 3),
+        )
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Ride Details",
+          style: text.titleMedium!.copyWith(fontFamily: AppFonts.medium),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ---------------- LEFT SIDE COLUMN ----------------
+            Column(
+              children: [
+                // Green dot
+                Container(
+                  height: 16,
+                  width: 16,
+                  decoration: const BoxDecoration(
+                      color: Colors.green,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(color: Colors.green, blurRadius: 7)
+                      ]),
+                ),
+
+                const SizedBox(height: 4),
+
+                // Vertical line
+                Container(
+                  height: 35,
+                  width: 2,
+                  color: Colors.black,
+                ),
+
+                const SizedBox(height: 4),
+
+                // Red dot
+                Container(
+                  height: 16,
+                  width: 16,
+                  decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                      boxShadow: [BoxShadow(color: Colors.red, blurRadius: 7)]),
+                ),
+              ],
+            ),
+
+            const SizedBox(width: 14),
+
+            // ---------------- RIGHT SIDE TEXT ----------------
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Pickup
+                  Text(
+                    bookRideProvider
+                            .rideDetailState.data?.requestData?.picAddress ??
+                        bookRideProvider.pickupLocation?.address ??
+                        '',
+                    style: text.bodyLarge,
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  // Divider (aligned to text)
+                  Container(
+                    height: 1,
+                    width: double.infinity,
+                    color: Colors.grey.shade300,
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  // Drop
+                  Text(
+                    bookRideProvider
+                            .rideDetailState.data?.requestData?.dropAddress ??
+                        bookRideProvider.dropLocation?.address ??
+                        '',
+                    style: text.bodyLarge,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
 }

@@ -10,6 +10,7 @@ import 'package:yuva_ride/provider/book_ride_provider.dart';
 import 'package:yuva_ride/main.dart';
 import 'package:yuva_ride/services/map_services.dart';
 import 'package:yuva_ride/services/status.dart';
+import 'package:yuva_ride/utils/app_urls.dart';
 import 'package:yuva_ride/utils/constatns.dart';
 import 'package:yuva_ride/utils/globle_func.dart';
 import 'package:yuva_ride/view/custom_widgets/cusotm_back.dart';
@@ -138,7 +139,6 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
                   setState(() {});
                 }
               },
-
               initialCameraPosition: CameraPosition(
                 target: bookingProvider.pickupLocation?.latLng ??
                     const LatLng(17.4075, 78.4764),
@@ -147,7 +147,7 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
               markers: mapService.markers,
               polylines: mapService.polylines,
               zoomControlsEnabled: false,
-              myLocationButtonEnabled: false ,
+              myLocationButtonEnabled: false,
               onTap: (LatLng latLng) async {},
             ),
           ),
@@ -258,9 +258,11 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
                                         data?.id.toString() ?? '',
                                         data?.pricing.baseFarePerUnit
                                                 .toString() ??
-                                            "",  data?.pricing.finalFare
-                                                .toString() ??
+                                            "",
+                                        data?.pricing.finalFare.toString() ??
                                             "");
+                                    bookProvider.setCategory(
+                                        data?.serviceCategory ?? '');
                                     bookProvider.assignDriverId(data?.drivers);
                                     if (kDebugMode) {
                                       print(data?.drivers);
@@ -276,7 +278,8 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
                                 isSelected: bookProvider.selectedVehicle?.id ==
                                     data?.id.toString(),
                                 text,
-                                icon: "assets/images/bike_book.png",
+                                iconImage:
+                                    AppUrl.imageUrl + (data?.image ?? ""),
                                 title: data?.name ?? "",
                                 price: "₹${data?.pricing.finalFare}",
                                 cutPrice: data?.pricing.discount != null
@@ -305,8 +308,7 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
                             .selectedVehicle
                             ?.id
                             .isNotEmpty ??
-                        false)){
-                          
+                        false)) {
                   context.read<BookRideProvider>().changeFareNaviagate(true);
                 } else {
                   showGeneralDialog(
@@ -815,6 +817,11 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
                   await provider.createRide(tip: selectedFare);
                   provider.rideDetailState = ApiResponse.loading();
                   if (isStatusSuccess(provider.rideCreateState.status)) {
+                    provider.rideDetail(
+                      requestId:
+                          provider.rideCreateState.data?['id']?.toString() ??
+                              '',
+                    );
                     // ignore: use_build_context_synchronously
                     Navigator.push(context,
                         AppAnimations.zoomOut(const PartnerOnTheWayScreen()));
@@ -922,7 +929,7 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
   // VEHICLE ITEM (TAP TO SELECT)
   // -----------------------------
   Widget _vehicleItem(TextTheme text,
-      {required String icon,
+      {required String iconImage,
       required String title,
       required String price,
       required bool isSelected,
@@ -950,7 +957,12 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
         ),
         child: Row(
           children: [
-            Image.asset(icon, height: 38),
+            Image.network(
+              iconImage,
+              height: 38,
+              errorBuilder: (context, error, stackTrace) =>
+                  Image.asset("assets/images/bike_book.png"),
+            ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -1495,8 +1507,9 @@ void _showRideForSomeoneSheet(BuildContext context) {
                         color: Colors.black54, size: 18)
                   ],
                 ),
-              ), 
-              const SizedBox(height: 18), 
+              ),
+              const SizedBox(height: 18),
+
               /// SAVE BUTTON
               SizedBox(
                 width: double.infinity,
@@ -1519,7 +1532,7 @@ void _showRideForSomeoneSheet(BuildContext context) {
                     ),
                   ),
                 ),
-              ), 
+              ),
               const SizedBox(height: 12),
             ],
           );

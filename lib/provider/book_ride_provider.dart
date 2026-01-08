@@ -1,5 +1,9 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:provider/provider.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'package:yuva_ride/main.dart';
 import 'package:yuva_ride/models/driver_profile_model.dart';
 import 'package:yuva_ride/models/home/available_driver_model.dart';
 import 'package:yuva_ride/models/home/calculator_price_model.dart';
@@ -10,10 +14,13 @@ import 'package:yuva_ride/models/ride_detail_model.dart';
 import 'package:yuva_ride/repository/ride_repository.dart';
 import 'package:yuva_ride/services/local_storage.dart';
 import 'package:yuva_ride/services/map_services.dart';
+import 'package:yuva_ride/services/razor_pay_services.dart';
 import 'package:yuva_ride/services/socket_services.dart';
 import 'package:yuva_ride/services/status.dart';
 import 'package:yuva_ride/utils/app_urls.dart';
 import 'package:yuva_ride/utils/globle_func.dart';
+import 'package:yuva_ride/view/screens/ride_booking/after_booking/partener_on_the_way_screen.dart';
+import 'package:yuva_ride/view/screens/ride_booking/after_booking/ride_completed_screen.dart';
 
 class BookRideProvider extends ChangeNotifier {
   LocationModel? _pickupLocation;
@@ -45,6 +52,8 @@ class BookRideProvider extends ChangeNotifier {
 
   void setCategory(String value) {
     _selectedCategory = value;
+    print('++++++++++++');
+    print(_selectedCategory);
     notifyListeners();
   }
 
@@ -101,7 +110,7 @@ class BookRideProvider extends ChangeNotifier {
           "${pickupLocation?.latLng.latitude},${pickupLocation?.latLng.longitude}", // pickupLatLon,
       dropLatLon:
           "${dropLocation?.latLng.latitude},${dropLocation?.latLng.longitude}", // dropLatLon,
-      serviceCategory: selectedCategory ?? '',
+      serviceCategory: 'all', // selectedCategory ?? '',
       dropLatLonList: [],
       couponId: selectedCoupon?.id, couponCode: selectedCoupon?.couponCode,
     );
@@ -136,7 +145,7 @@ class BookRideProvider extends ChangeNotifier {
 
   assignDriverId(var idS) {
     driverIds = idS;
-    driverIds = [225]; //static
+    // driverIds = [225]; //static
     print('ids = $driverIds');
   }
 
@@ -349,17 +358,112 @@ class BookRideProvider extends ChangeNotifier {
         'driverid': driverIds,
       });
     }
-
     notifyListeners();
   }
 
   ApiResponse<RideDetailModel> rideDetailState = ApiResponse.loading();
-  Future<void> rideDetail(
-      {required String requestId, required String driverId}) async {
-    rideDetailState = ApiResponse.loading();
+  Future<void> rideDetail({required String requestId}) async {
+    final data = await _repo.getRideDetail(
+      requestId: requestId,
+    );
+    if (data.data != null) {
+      rideDetailState = data;
+    }
     notifyListeners();
-    rideDetailState =
-        await _repo.getRideDetail(driverId: driverId, requestId: requestId);
+  }
+
+  final RazorpayService _razorpayService = RazorpayService();
+
+  ApiResponse paymentState = ApiResponse.nothing();
+
+  String? _razorpayBackendOrderId;
+
+  void initRazorpay() {
+    _razorpayService.onSuccess = _onPaymentSuccess;
+    _razorpayService.onError = _onPaymentError;
+  }
+
+  String? orderId;
+  String? driverId;
+
+  Future<void> createRazorpayOrder({
+    required String rideOrderId, // taxi order id
+    required String amount,
+  }) async {
+    initRazorpay();
+    paymentState = ApiResponse.loading();
+    notifyListeners();
+
+    final uid = await LocalStorage.getUserId() ?? '';
+
+    final response =
+        await _repo.createRazorpayOrder(uid: uid, orderId: rideOrderId);
+
+    if (isStatusSuccess(response.status)) {
+      _razorpayBackendOrderId = response.data['razorpay_order_id']?.toString();
+      _razorpayService.openCheckout(
+          key: "rzp_test_Rn3pWJq83UqioO",
+          amount: (parseToDouble(amount) * 100).toInt(),
+          name: rideDetailState.data?.requestData?.customerName ?? '',
+          orderId: _razorpayBackendOrderId!,
+          phone: rideDetailState.data?.requestData?.phone ?? '',
+          email: "test@gmail.com");
+    }
+
+    paymentState = response;
+    notifyListeners();
+  }
+
+  emitPaymentSuccess(){
+    _socket.emit('online_payment_success', {
+      "order_id": "694",
+      "cart_id": "753",
+      "payment_status": 'completed',
+      "total_amount": "18.5",
+      "driver_earning": "6",
+      "payment_method": "9",
+      "completed_at":  DateTime.now().toString()
+    });
+  }
+
+  Future<void> _onPaymentSuccess(PaymentSuccessResponse response) async {
+    final uid = await LocalStorage.getUserId() ?? '';
+
+    paymentState = ApiResponse.loading();
+    notifyListeners();
+
+    paymentState = await _repo.completeOnlinePayment(
+      uid: uid,
+      orderId: orderId ?? '', // taxi order id
+      paymentMethod: "3", // online
+      razorpayPaymentId: response.paymentId ?? '',
+      razorpayOrderId: response.orderId ?? '',
+      razorpaySignature: response.signature ?? '',
+      paymentStatus: "success",
+    );
+    showModalBottomSheet(
+      context: navigatorKey.currentContext!,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final text = Theme.of(context).textTheme;
+        return paymentSuccessBottomSheet(
+            context, text, context.read<BookRideProvider>());
+      },
+    );
+    Future.delayed(const Duration(seconds: 3), () {
+      Navigator.pop(navigatorKey.currentContext!);
+      Navigator.push(
+        navigatorKey.currentContext!,
+        MaterialPageRoute(builder: (_) => const RideCompletedScreen()),
+      );
+    });
+
+    notifyListeners();
+  }
+
+  void _onPaymentError(PaymentFailureResponse response) {
+    paymentState = ApiResponse.error("Payment Failed");
     notifyListeners();
   }
 
@@ -459,9 +563,7 @@ class BookRideProvider extends ChangeNotifier {
       print(data);
       await getDriverProfile(driverId: data['u_id']?.toString() ?? '');
       driverCurrentId = data['u_id']?.toString();
-      await rideDetail(
-          driverId: data['u_id']?.toString() ?? '',
-          requestId: data['request_id']?.toString() ?? '');
+      await rideDetail(requestId: data['request_id']?.toString() ?? '');
       final startLocation = LatLng(
           rideDetailState.data?.driverToCustomer?.driverLocation?.latitude ??
               17.438911,
@@ -485,9 +587,10 @@ class BookRideProvider extends ChangeNotifier {
       if ((data["otp"]?.toString() ?? '').isNotEmpty) {
         showCustomToast(title: 'Driver Arrived at pickup location');
       }
+      driverId = data["u_id"]?.toString() ?? '';
       rideDetail(
-          requestId: data["request_id"]?.toString() ?? '',
-          driverId: data["u_id"]?.toString() ?? '');
+        requestId: data["request_id"]?.toString() ?? '',
+      );
     });
 
     _socket.on('Vehicle_Ride_Start_End$uid', (data) async {
@@ -500,14 +603,39 @@ class BookRideProvider extends ChangeNotifier {
               rideDetailState.data?.requestData?.dropLatLong) ??
           const LatLng(17.438911, 78.3983894);
       await rideDetail(
-          requestId: data?['uid']?.toString() ?? "",
-          driverId: data?['request_id']?.toString() ?? '');
+        requestId: data?['request_id']?.toString() ?? '',
+      );
       pickuDropMapFeatures(startLocation, endLocation);
     });
 
     // ❌ Ride cancelled
     _socket.on('Vehicle_Ride_Cancel', (data) {
       print('❌ Ride cancelled');
+    });
+
+    _socket.on('Ride_Complete_Notify', (data) {
+      print('++++++++++++++print data Ride_Complete_Notify++++++++++++++');
+      print(data);
+      orderId = data['order_id'].toString();
+      if (data?['payment_method_id']?.toString() == '9') {
+        final context = navigatorKey.currentContext!;
+        Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+                builder: (context) => const RideCompletedScreen()),
+            (_) => false);
+      } else {
+        showPaymentDialog(navigatorKey.currentContext!,
+            price: data?['amount_to_pay']?.toString() ?? '', onYes: () {
+          createRazorpayOrder(
+            rideOrderId: data['order_id'].toString(),
+            amount: data['tatal_amount'].toString(),
+          );
+        }, onNo: () {});
+      }
+
+      // rideDetail(requestId:  data['request_id'].toString(), driverId: rideDetailState.data?.re);
+      print('Ride_Complete_Notify');
     });
 
     // 📍 Live driver location (new tracking system)
@@ -587,4 +715,23 @@ class SelectContactModel {
   final String? cId;
   final String? id;
   final String? countryCode;
+}
+
+double parseToDouble(dynamic value, {double defaultValue = 0.0}) {
+  if (value == null) return defaultValue;
+
+  if (value is double) return value;
+  if (value is int) return value.toDouble();
+
+  if (value is String) {
+    final cleaned = value
+        .trim()
+        .replaceAll(RegExp(r'[^0-9.-]'), ''); // removes ₹, commas, text
+
+    if (cleaned.isEmpty) return defaultValue;
+
+    return double.tryParse(cleaned) ?? defaultValue;
+  }
+
+  return defaultValue;
 }

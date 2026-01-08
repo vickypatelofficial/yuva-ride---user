@@ -6,6 +6,7 @@ import 'package:yuva_ride/models/home/home_model.dart';
 import 'package:yuva_ride/models/home/payment_coupon_model.dart';
 import 'package:yuva_ride/models/ride_detail_model.dart';
 import 'package:yuva_ride/services/api_services.dart';
+import 'package:yuva_ride/services/local_storage.dart';
 import 'package:yuva_ride/services/status.dart';
 import 'package:yuva_ride/utils/app_urls.dart';
 import 'package:yuva_ride/utils/globle_func.dart';
@@ -47,8 +48,7 @@ class RideRepository {
       "tot_minute": totalMinute,
       "payment_id": paymentId,
       "m_role": mRole,
-      if(couponId!=null)
-      "coupon_id": couponId,
+      if (couponId != null) "coupon_id": couponId,
       "bidd_auto_status": bidAutoStatus,
       "pickup": pickup,
       "drop": drop,
@@ -102,8 +102,8 @@ class RideRepository {
       "pickup_lat_lon": pickupLatLon,
       "drop_lat_lon": dropLatLon,
       "drop_lat_lon_list": dropLatLonList,
-      if (couponId != null && couponCode ==null) "coupon_id": couponId,
-      if (couponCode !=null) "coupon_code": couponCode,
+      if (couponId != null && couponCode == null) "coupon_id": couponId,
+      if (couponCode != null) "coupon_code": couponCode,
     };
 
     final response = await _api.post(AppUrl.calculate, body);
@@ -230,17 +230,59 @@ class RideRepository {
 
   /// 🔹 Get ride Ride
   Future<ApiResponse<RideDetailModel>> getRideDetail({
-    required String driverId,
     required String requestId,
   }) async {
     final response = await _api.post(
       AppUrl.rideDetail,
-      {"uid": driverId, "request_id": requestId},
+      {"uid": await LocalStorage.getUserId(), "request_id": requestId},isToast: false
     );
     if (isStatusSuccess(response.status)) {
       return ApiResponse.success(RideDetailModel.fromJson(response.data));
     } else {
       return ApiResponse.error(response.message);
     }
+  }
+
+  ///  CREATE RAZORPAY ORDER
+  Future<ApiResponse> createRazorpayOrder({
+    required String uid,
+    required String orderId,
+  }) async {
+    final body = {
+      "uid": uid,
+      "order_id": orderId,  
+    };
+
+    return await _api.post(
+      AppUrl.createRazorpayOrder,
+      body,
+      isSuccessToast: false
+    );
+  }
+
+  ///  COMPLETE ONLINE PAYMENT
+  Future<ApiResponse> completeOnlinePayment({
+    required String uid,
+    required String orderId,
+    required String paymentMethod,
+    required String razorpayPaymentId,
+    required String razorpayOrderId,
+    required String razorpaySignature,
+    required String paymentStatus,
+  }) async {
+    final body = {
+      "uid": uid,
+      "order_id": orderId,
+      "payment_method": paymentMethod,
+      "razorpay_payment_id": razorpayPaymentId,
+      "razorpay_order_id": razorpayOrderId,
+      "razorpay_signature": razorpaySignature,
+      "payment_status": paymentStatus,
+    };
+
+    return await _api.post(
+      AppUrl.completeOnlinePayment,
+      body,
+    );
   }
 }

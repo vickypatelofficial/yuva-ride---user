@@ -578,7 +578,7 @@ class _SelectLocationBookScreenState extends State<SelectLocationBookScreen>
                     }
                     // context.read<BookRideProvider>().fetchCategory();
                     final provider = context.read<BookRideProvider>();
-                    provider.setCategory('taxi');
+                    provider.setCategory('all');
                     provider.setVehicle('', '', '');
                     provider.setCoupon('', null, null);
                     provider.changeFareNaviagate(false);

@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:yuva_ride/provider/book_ride_provider.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_scaffold_utils.dart';
 import 'package:yuva_ride/utils/animations.dart';
 import 'package:yuva_ride/utils/app_colors.dart';
@@ -61,6 +63,7 @@ class _RideCompletedScreenState extends State<RideCompletedScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bookRideProvider = context.read<BookRideProvider>();
     final text = Theme.of(context).textTheme;
 
     double w = MediaQuery.of(context).size.width; // screen width
@@ -116,14 +119,23 @@ class _RideCompletedScreenState extends State<RideCompletedScreen> {
             padding: EdgeInsets.symmetric(horizontal: w * 0.08),
             child: Column(
               children: [
-                _summaryRow("Ride far", "₹45", text, w),
+                _summaryRow(
+                    "Ride far",
+                    "₹${bookRideProvider.rideDetailState.data?.requestData?.price}",
+                    text,
+                    w),
                 _summaryRow("Coupon", "₹0", text, w),
                 _summaryRow("Ride charge", "₹45", text, w),
                 Divider(
                   color: Colors.grey.shade400,
                   height: h * 0.03,
                 ),
-                _summaryRow("Amount Paid", "₹45", text, w, bold: true),
+                _summaryRow(
+                    "Amount Paid",
+                    "₹${bookRideProvider.rideDetailState.data?.requestData?.finalPrice}",
+                    text,
+                    w,
+                    bold: true),
               ],
             ),
           ),
@@ -143,7 +155,10 @@ class _RideCompletedScreenState extends State<RideCompletedScreen> {
             padding: EdgeInsets.only(
                 bottom: h * 0.03, left: w * 0.05, right: w * 0.05),
             child: GestureDetector(
-              onTap: goToHome,
+              // onTap: goToHome,
+              onTap: () {
+                bookRideProvider.emitPaymentSuccess();
+              },
               child: Container(
                 height: h * 0.065,
                 width: double.infinity,
@@ -199,6 +214,7 @@ class _RideCompletedScreenState extends State<RideCompletedScreen> {
 
   // ---------------- RIDE DETAILS SECTION ----------------
   Widget _rideDetails(TextTheme text, double w, double h) {
+    final bookRideProvider = context.read<BookRideProvider>();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -250,7 +266,7 @@ class _RideCompletedScreenState extends State<RideCompletedScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "9-120, Madhapur metro station,\nHyderabad",
+                    " ${bookRideProvider.rideDetailState.data?.requestData?.picAddress}",
                     style: text.bodyLarge!.copyWith(fontSize: w * 0.04),
                   ),
                   SizedBox(height: h * 0.01),
@@ -261,7 +277,7 @@ class _RideCompletedScreenState extends State<RideCompletedScreen> {
                   ),
                   SizedBox(height: h * 0.01),
                   Text(
-                    "9-120, Hitech metro station,\nHyderabad",
+                    " ${bookRideProvider.rideDetailState.data?.requestData?.dropAddress}",
                     style: text.bodyLarge!.copyWith(fontSize: w * 0.04),
                   ),
                 ],
@@ -307,99 +323,99 @@ class _RatingDialog extends StatelessWidget {
             children: [
               /// CLOSE ICON
               Align(
-              alignment: Alignment.topRight,
-              child: InkWell(
-                onTap: () => Navigator.pop(context),
-                child: Icon(Icons.close, size: w * 0.065),
-              ),
+                alignment: Alignment.topRight,
+                child: InkWell(
+                  onTap: () => Navigator.pop(context),
+                  child: Icon(Icons.close, size: w * 0.065),
+                ),
               ),
 
               SizedBox(height: h * 0.005),
 
               /// DRIVER PROFILE + TITLE
               Row(
-              children: [
-                /// DRIVER IMAGE
-                ClipRRect(
-                borderRadius: BorderRadius.circular(40),
-                child: Image.asset(
-                  "assets/images/driver.png",
-                  height: w * 0.16,
-                  width: w * 0.16,
-                  fit: BoxFit.cover,
-                ),
-                ),
-                SizedBox(width: w * 0.04),
-
-                /// TITLE
-                Expanded(
-                child: Text(
-                  "How was your ride with\nSuresh Kumar",
-                  style: text.titleMedium!.copyWith(
-                  fontSize: w * 0.047,
-                  fontWeight: FontWeight.w600,
-                  fontFamily: AppFonts.medium,
+                children: [
+                  /// DRIVER IMAGE
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(40),
+                    child: Image.asset(
+                      "assets/images/driver.png",
+                      height: w * 0.16,
+                      width: w * 0.16,
+                      fit: BoxFit.cover,
+                    ),
                   ),
-                ),
-                ),
-              ],
+                  SizedBox(width: w * 0.04),
+
+                  /// TITLE
+                  Expanded(
+                    child: Text(
+                      "How was your ride with\nSuresh Kumar",
+                      style: text.titleMedium!.copyWith(
+                        fontSize: w * 0.047,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: AppFonts.medium,
+                      ),
+                    ),
+                  ),
+                ],
               ),
 
               SizedBox(height: h * 0.02),
 
               /// STAR RATING
               Row(
-              children: List.generate(5, (i) {
-                return Padding(
-                padding: EdgeInsets.only(right: w * 0.02),
-                child: Icon(
-                  i < 4 ? Icons.star : Icons.star_border,
-                  color: Colors.amber,
-                  size: w * 0.075,
-                ),
-                );
-              }),
+                children: List.generate(5, (i) {
+                  return Padding(
+                    padding: EdgeInsets.only(right: w * 0.02),
+                    child: Icon(
+                      i < 4 ? Icons.star : Icons.star_border,
+                      color: Colors.amber,
+                      size: w * 0.075,
+                    ),
+                  );
+                }),
               ),
 
               SizedBox(height: h * 0.02),
 
               /// SMALL SUBTEXT
               Text(
-              "Great, what did you like most",
-              style: text.bodyMedium!.copyWith(
-                fontSize: w * 0.04,
-                color: Colors.black87,
-              ),
+                "Great, what did you like most",
+                style: text.bodyMedium!.copyWith(
+                  fontSize: w * 0.04,
+                  color: Colors.black87,
+                ),
               ),
 
               SizedBox(height: h * 0.02),
 
               /// TEXTFIELD
               Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.grey.shade300),
-                color: Colors.grey.shade100,
-              ),
-              padding: EdgeInsets.symmetric(horizontal: w * 0.04),
-              child: TextField(
-                maxLines: 3,
-                decoration: InputDecoration(
-                fillColor: Colors.grey.shade100,
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                disabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                errorBorder: InputBorder.none,
-                focusedErrorBorder: InputBorder.none,
-                contentPadding: EdgeInsets.all(10),
-                hintText: "Describe about your experience, Here",
-                hintStyle: text.bodySmall!.copyWith(
-                  fontSize: w * 0.038,
-                  color: Colors.grey,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.grey.shade300),
+                  color: Colors.grey.shade100,
                 ),
+                padding: EdgeInsets.symmetric(horizontal: w * 0.04),
+                child: TextField(
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    fillColor: Colors.grey.shade100,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    disabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    errorBorder: InputBorder.none,
+                    focusedErrorBorder: InputBorder.none,
+                    contentPadding: EdgeInsets.all(10),
+                    hintText: "Describe about your experience, Here",
+                    hintStyle: text.bodySmall!.copyWith(
+                      fontSize: w * 0.038,
+                      color: Colors.grey,
+                    ),
+                  ),
                 ),
-              ),
               ),
 
               SizedBox(height: h * 0.02),
@@ -408,38 +424,39 @@ class _RatingDialog extends StatelessWidget {
               Align(
                 alignment: Alignment.center,
                 child: GestureDetector(
-                onTap: () {
-                  // close dialog then navigate to home
-                  Navigator.pop(context);
-                  Future.microtask(() {
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    AppAnimations.fade(
-                    const HomeScreen(),
-                    transitionDuration: const Duration(milliseconds: 2300),
+                  onTap: () {
+                    // close dialog then navigate to home
+                    Navigator.pop(context);
+                    Future.microtask(() {
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        AppAnimations.fade(
+                          const HomeScreen(),
+                          transitionDuration:
+                              const Duration(milliseconds: 2300),
+                        ),
+                        (v) => false,
+                      );
+                    });
+                  },
+                  child: Container(
+                    height: 40,
+                    width: 150,
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryColor,
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                    (v) => false,
-                  );
-                  });
-                },
-                child: Container(
-                  height:40,
-                  width: 150,
-                  decoration: BoxDecoration(
-                  color: AppColors.primaryColor,
-                  borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Center(
-                  child: Text(
-                    "Submit",
-                    style: text.titleMedium!.copyWith(
-                    color: Colors.white,
-                    fontSize: w * 0.045,
-                    fontFamily: AppFonts.medium,
+                    child: Center(
+                      child: Text(
+                        "Submit",
+                        style: text.titleMedium!.copyWith(
+                          color: Colors.white,
+                          fontSize: w * 0.045,
+                          fontFamily: AppFonts.medium,
+                        ),
+                      ),
                     ),
                   ),
-                  ),
-                ),
                 ),
               ),
 
