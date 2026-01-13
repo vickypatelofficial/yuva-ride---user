@@ -11,7 +11,6 @@ import 'package:yuva_ride/view/screens/home/home_screen.dart';
 
 class RideCompletedScreen extends StatefulWidget {
   const RideCompletedScreen({super.key});
-
   @override
   State<RideCompletedScreen> createState() => _RideCompletedScreenState();
 }
@@ -68,118 +67,133 @@ class _RideCompletedScreenState extends State<RideCompletedScreen> {
 
     double w = MediaQuery.of(context).size.width; // screen width
     double h = MediaQuery.of(context).size.height; // screen height
-
-    return CustomScaffold(
-      backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          // ---------------- TOP CURVED AREA ----------------
-          Stack(
-            children: [
-              Container(
-                height: h * 0.40,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: const Color(0xffFFEDD5),
-                  borderRadius: BorderRadius.vertical(
-                    bottom: Radius.circular(w * 0.55),
+   final requestData = context
+              .read<BookRideProvider>()
+              .rideDetailState
+              .data
+              ?.requestData;
+    return WillPopScope(
+      onWillPop: () async{
+        return false;
+      },
+      child: CustomScaffold(
+        backgroundColor: Colors.white,
+        body: Column(
+          children: [
+            // ---------------- TOP CURVED AREA ----------------
+            Stack(
+              children: [
+                Container(
+                  height: h * 0.40,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: const Color(0xffFFEDD5),
+                    borderRadius: BorderRadius.vertical(
+                      bottom: Radius.circular(w * 0.55),
+                    ),
                   ),
                 ),
-              ),
-              Positioned(
-                top: h * 0.07,
-                left: 0,
-                right: 0,
-                child: Column(
-                  children: [
-                    Image.asset(
-                      "assets/images/ride_completed.png",
-                      height: w * 0.38,
-                    ),
-                    SizedBox(height: h * 0.015),
-                    Text(
-                      "Successfully\nRide completed",
-                      textAlign: TextAlign.center,
-                      style: text.headlineSmall!.copyWith(
-                        fontFamily: AppFonts.medium,
-                        fontWeight: FontWeight.bold,
-                        fontSize: w * 0.055,
+                Positioned(
+                  top: h * 0.07,
+                  left: 0,
+                  right: 0,
+                  child: Column(
+                    children: [
+                      Image.asset(
+                        "assets/images/ride_completed.png",
+                        height: w * 0.38,
                       ),
-                    ),
-                  ],
+                      SizedBox(height: h * 0.015),
+                      Text(
+                        "Successfully\nRide completed",
+                        textAlign: TextAlign.center,
+                        style: text.headlineSmall!.copyWith(
+                          fontFamily: AppFonts.medium,
+                          fontWeight: FontWeight.bold,
+                          fontSize: w * 0.055,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-
-          SizedBox(height: h * 0.03),
-
-          // ---------------- PAYMENT SUMMARY ----------------
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: w * 0.08),
-            child: Column(
-              children: [
-                _summaryRow(
-                    "Ride far",
-                    "₹${bookRideProvider.rideDetailState.data?.requestData?.price}",
-                    text,
-                    w),
-                _summaryRow("Coupon", "₹0", text, w),
-                _summaryRow("Ride charge", "₹45", text, w),
-                Divider(
-                  color: Colors.grey.shade400,
-                  height: h * 0.03,
-                ),
-                _summaryRow(
-                    "Amount Paid",
-                    "₹${bookRideProvider.rideDetailState.data?.requestData?.finalPrice}",
-                    text,
-                    w,
-                    bold: true),
               ],
             ),
-          ),
-
-          SizedBox(height: h * 0.03),
-
-          // ---------------- RIDE DETAILS ----------------
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: w * 0.06),
-            child: _rideDetails(text, w, h),
-          ),
-
-          const Spacer(),
-
-          // ---------------- BACK TO HOME BUTTON ----------------
-          Padding(
-            padding: EdgeInsets.only(
-                bottom: h * 0.03, left: w * 0.05, right: w * 0.05),
-            child: GestureDetector(
-              // onTap: goToHome,
-              onTap: () {
-                bookRideProvider.emitPaymentSuccess();
-              },
-              child: Container(
-                height: h * 0.065,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: AppColors.primaryColor,
-                  borderRadius: BorderRadius.circular(w * 0.08),
-                ),
-                child: Center(
-                  child: Text(
-                    "Back to Home",
-                    style: text.titleMedium!.copyWith(
-                      color: Colors.white,
-                      fontSize: w * 0.045,
-                      fontFamily: AppFonts.medium,
+              
+            SizedBox(height: h * 0.03),
+              
+            // ---------------- PAYMENT SUMMARY ----------------
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: w * 0.08),
+              child: Column(
+                children: [
+                  // _summaryRow(
+                  //     "Ride far",
+                  //     "₹${bookRideProvider.rideDetailState.data?.requestData?.price}",
+                  //     text,
+                  //     w),
+                  // _summaryRow("Coupon", "₹0", text, w),
+                  // _summaryRow("Ride charge", "₹45", text, w),
+                  // Divider(
+                  //   color: Colors.grey.shade400,
+                  //   height: h * 0.03,
+                  // ),
+                  // _summaryRow(
+                  //     "Amount Paid",
+                  //     "₹${bookRideProvider.rideDetailState.data?.requestData?.finalPrice}",
+                  //     text,
+                  //     w,
+                  //     bold: true),
+                   _fareItem(
+                          "Ride charge", "₹${requestData?.baseFarePerUnit}"),
+                      _fareItem(
+                          "Weather charges", "₹${requestData?.weatherPrice}"),
+                      _fareItem("Tip", "₹${requestData?.tip}"),
+                      _fareItem(
+                          "Additional time", "₹${requestData?.addiTimePrice}"),
+                      const Divider(height: 28),
+                      _fareItem("Amount Paid", "₹${requestData?.finalPrice}",
+                          isBold: true, valueColor: AppColors.black),
+                ],
+              ),
+            ),
+            // SizedBox(height: h * 0.03),
+              
+            // ---------------- RIDE DETAILS ----------------
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: w * 0.06),
+              child: _rideDetails(text, w, h),
+            ),
+              
+            const Spacer(),
+              
+            // ---------------- BACK TO HOME BUTTON ----------------
+            Padding(
+              padding: EdgeInsets.only(
+                  bottom: h * 0.03, left: w * 0.05, right: w * 0.05),
+              child: GestureDetector(
+                onTap: goToHome, 
+                child: Container(
+                  height: h * 0.065,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryColor,
+                    borderRadius: BorderRadius.circular(w * 0.08),
+                  ),
+                  child: Center(
+                    child: Text(
+                      "Back to Home",
+                      style: text.titleMedium!.copyWith(
+                        color: Colors.white,
+                        fontSize: w * 0.045,
+                        fontFamily: AppFonts.medium,
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -468,3 +482,27 @@ class _RatingDialog extends StatelessWidget {
     );
   }
 }
+
+
+  Widget _fareItem(String label, String value,
+      {bool isBold = false, Color valueColor = Colors.grey}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: isBold ? FontWeight.bold : FontWeight.w400,
+              )),
+          Text(value,
+              style: TextStyle(
+                fontSize: 15,
+                color: valueColor,
+                fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+              )),
+        ],
+      ),
+    );
+  }

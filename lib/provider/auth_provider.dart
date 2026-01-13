@@ -94,13 +94,10 @@ class AuthProvider extends ChangeNotifier {
   // }
 
   /// PROFILE
-  Future<void> fetchProfile({String? userId}) async {
-    if (userId == null) return;
-
+  Future<void> fetchProfile() async {
     profileState = ApiResponse.loading();
-    notifyListeners();
-
-    profileState = await _repo.getCustomerProfile(userId: userId);
+    notifyListeners(); 
+    profileState = await _repo.getCustomerProfile();
     notifyListeners();
   }
 }

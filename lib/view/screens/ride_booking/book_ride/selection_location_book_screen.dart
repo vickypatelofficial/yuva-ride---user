@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:yuva_ride/provider/book_ride_provider.dart';
+import 'package:yuva_ride/services/map_services.dart';
 import 'package:yuva_ride/view/custom_widgets/cusotm_back.dart';
 import 'package:yuva_ride/view/custom_widgets/cusotm_radio_container.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_scaffold_utils.dart';
@@ -29,6 +30,7 @@ class _SelectLocationBookScreenState extends State<SelectLocationBookScreen>
   late AnimationController _hintController;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _fadeAnimation;
+  final MapService _mapService = MapService();
 
   @override
   void initState() {
@@ -53,6 +55,11 @@ class _SelectLocationBookScreenState extends State<SelectLocationBookScreen>
       begin: 0,
       end: 1,
     ).animate(_hintController);
+    _loadCurrentLocation();
+  }
+  LatLng? currentLatLng;
+  Future<void> _loadCurrentLocation() async {
+    currentLatLng = await MapService.getCurrentLatLng();
   }
 
   bool _showLocationHint = false;
@@ -325,11 +332,18 @@ class _SelectLocationBookScreenState extends State<SelectLocationBookScreen>
                         ),
                         child: Text(
                           ((context.read<BookRideProvider>().selectedContact ==
-                        null) ||
-                    (context.read<BookRideProvider>().selectedContact?.isSelf ??
-                        true))
-                ? "My Self"
-                : context.read<BookRideProvider>().selectedContact?.name ?? "",
+                                      null) ||
+                                  (context
+                                          .read<BookRideProvider>()
+                                          .selectedContact
+                                          ?.isSelf ??
+                                      true))
+                              ? "My Self"
+                              : context
+                                      .read<BookRideProvider>()
+                                      .selectedContact
+                                      ?.name ??
+                                  "",
                           style: text.bodyMedium!.copyWith(
                               color: Colors.white, fontFamily: AppFonts.medium),
                         ),
@@ -405,8 +419,9 @@ class _SelectLocationBookScreenState extends State<SelectLocationBookScreen>
                                       context,
                                       AppAnimations.fade(
                                           SelectLocationMapScreen(
+                                            type: 'pickup',
                                         latLng: bookRideController
-                                            .pickupLocation?.latLng,
+                                            .pickupLocation?.latLng ?? currentLatLng,
                                         onSelectLocation: (LatLng latLng,
                                             String address,
                                             String title,
@@ -428,7 +443,7 @@ class _SelectLocationBookScreenState extends State<SelectLocationBookScreen>
                                         provider.pickupLocation?.address ??
                                             "Select your Pickup location",
                                         style: text.bodyLarge!.copyWith(
-                                            fontFamily: AppFonts.medium),
+                                            fontFamily: AppFonts.medium), overflow: TextOverflow.ellipsis,
                                         maxLines: 1,
                                       ),
                                     ),
@@ -473,8 +488,9 @@ class _SelectLocationBookScreenState extends State<SelectLocationBookScreen>
                                       context,
                                       AppAnimations.fade(
                                           SelectLocationMapScreen(
+                                            type: 'drop',
                                         latLng: bookRideController
-                                            .dropLocation?.latLng,
+                                            .dropLocation?.latLng ?? currentLatLng,
                                         onSelectLocation: (LatLng latLng,
                                             String address,
                                             String title,
@@ -494,7 +510,7 @@ class _SelectLocationBookScreenState extends State<SelectLocationBookScreen>
                                         provider.dropLocation?.address ??
                                             "Select your Drop location",
                                         style: text.bodyLarge!.copyWith(
-                                            fontFamily: AppFonts.medium),
+                                            fontFamily: AppFonts.medium), overflow: TextOverflow.ellipsis,
                                         maxLines: 1,
                                       ),
                                     ),

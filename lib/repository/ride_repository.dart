@@ -1,6 +1,8 @@
 import 'package:yuva_ride/models/driver_profile_model.dart';
+import 'package:yuva_ride/models/home/active_ride_model.dart';
 import 'package:yuva_ride/models/home/available_driver_model.dart';
 import 'package:yuva_ride/models/home/calculator_price_model.dart';
+import 'package:yuva_ride/models/home/cancel_ride_reason_model.dart';
 import 'package:yuva_ride/models/home/contact_model.dart';
 import 'package:yuva_ride/models/home/home_model.dart';
 import 'package:yuva_ride/models/home/payment_coupon_model.dart';
@@ -228,16 +230,56 @@ class RideRepository {
     );
   }
 
+  Future<ApiResponse<CancelRideReasonModel>> cancelRideReason() async {
+    final response = await _api.get(AppUrl.cancelRideReason);
+    if (isStatusSuccess(response.status)) {
+      return ApiResponse.success(CancelRideReasonModel.fromJson(response.data));
+    } else {
+      return ApiResponse.error(response.message);
+    }
+  }
+
+ /// 🔹 Remove Ride Request
+  Future<ApiResponse> removeRideRequest({
+    required String requestId 
+  }) async {
+    return await _api.post(
+      AppUrl.removeRideRequest,
+      {
+        "uid": await LocalStorage.getUserId()??'',
+        "request_id": requestId
+      },
+    );
+  }
+
   /// 🔹 Get ride Ride
   Future<ApiResponse<RideDetailModel>> getRideDetail({
     required String requestId,
   }) async {
-    final response = await _api.post(
-      AppUrl.rideDetail,
-      {"uid": await LocalStorage.getUserId(), "request_id": requestId},isToast: false
-    );
+    final response = await _api.post(AppUrl.rideDetail,
+        {"uid": await LocalStorage.getUserId(), "request_id": requestId},
+        isToast: false);
     if (isStatusSuccess(response.status)) {
       return ApiResponse.success(RideDetailModel.fromJson(response.data));
+    } else {
+      return ApiResponse.error(response.message);
+    }
+  }
+
+  Future<ApiResponse<ActiveRideModel>> getUserActiveRide() async {
+    final uid = await LocalStorage.getUserId();
+
+    final response = await _api.post(
+      AppUrl.customerRunningRide,
+      {
+        "uid": uid,
+        "role": "customer",
+      },
+      isToast: false,
+    );
+
+    if (isStatusSuccess(response.status)) {
+      return ApiResponse.success(ActiveRideModel.fromJson(response.data));
     } else {
       return ApiResponse.error(response.message);
     }
@@ -250,14 +292,11 @@ class RideRepository {
   }) async {
     final body = {
       "uid": uid,
-      "order_id": orderId,  
+      "order_id": orderId,
     };
 
-    return await _api.post(
-      AppUrl.createRazorpayOrder,
-      body,
-      isSuccessToast: false
-    );
+    return await _api.post(AppUrl.createRazorpayOrder, body,
+        isSuccessToast: false);
   }
 
   ///  COMPLETE ONLINE PAYMENT

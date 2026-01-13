@@ -70,7 +70,7 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
     Future.delayed(const Duration(milliseconds: 300), () {
       sheetCtrl.forward();
     });
-    context.read<BookRideProvider>().init();
+    context.read<BookRideProvider>().initSocket();
   }
 
   Future<BitmapDescriptor> getResizedMarker(String path, int width) async {
@@ -119,37 +119,56 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
           ),
 
           /// GOOGLE MAP
-          Positioned.fill(
-            top: 90,
-            bottom: screenHeight * .45,
-            child: GoogleMap(
-              onMapCreated: (controller) async {
-                mapService.initController(controller);
+          Stack(
+            children: [
+              Positioned.fill(
+                top: 90,
+                bottom: screenHeight * .45,
+                child: GoogleMap(
+                  onMapCreated: (controller) async {
+                    mapService.initController(controller);
 
-                await mapService.loadMapIcons(
-                    startLocationIcon: 'assets/images/green_marker.png',
-                    endLocationIcon:
-                        'assets/images/red_marker.png'); // MUST finish first
+                    await mapService.loadMapIcons(
+                        startLocationIcon: 'assets/images/green_marker.png',
+                        endLocationIcon:
+                            'assets/images/red_marker.png'); // MUST finish first
 
-                await mapService.setupRoute(
-                  pickup: bookingProvider.pickupLocation!.latLng,
-                  drop: bookingProvider.dropLocation!.latLng,
-                );
-                if (mounted) {
-                  setState(() {});
-                }
-              },
-              initialCameraPosition: CameraPosition(
-                target: bookingProvider.pickupLocation?.latLng ??
-                    const LatLng(17.4075, 78.4764),
-                zoom: 13.5,
+                    await mapService.setupRoute(
+                      pickup: bookingProvider.pickupLocation!.latLng,
+                      drop: bookingProvider.dropLocation!.latLng,
+                    );
+                    if (mounted) {
+                      setState(() {});
+                    }
+                  },
+                  initialCameraPosition: CameraPosition(
+                    target: bookingProvider.pickupLocation?.latLng ??
+                        const LatLng(17.4075, 78.4764),
+                    zoom: 13.5,
+                  ),
+                  markers: mapService.markers,
+                  polylines: mapService.polylines,
+                  zoomControlsEnabled: false,
+                  myLocationButtonEnabled: false,
+                  mapToolbarEnabled: true,
+                  onTap: (LatLng latLng) async {},
+                ),
               ),
-              markers: mapService.markers,
-              polylines: mapService.polylines,
-              zoomControlsEnabled: false,
-              myLocationButtonEnabled: false,
-              onTap: (LatLng latLng) async {},
-            ),
+              Positioned(
+                bottom: MediaQuery.of(context).size.height * .52 + 20,
+                right: 16,
+                child: FloatingActionButton(
+                  backgroundColor: Colors.white,
+                  child: const Icon(Icons.my_location, color: Colors.black),
+                  onPressed: () async {
+                    await mapService.setupRoute(
+                      pickup: bookingProvider.pickupLocation!.latLng,
+                      drop: bookingProvider.dropLocation!.latLng,
+                    );
+                  }
+                ),
+              ),
+            ],
           ),
 
           /// BOTTOM SHEET
@@ -549,7 +568,15 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
               children: fareOptions.map((value) {
                     bool isSelected = value == selectedFare;
                     return GestureDetector(
-                        onTap: () => setState(() => selectedFare = value),
+                        onTap: () {
+                          setState(() {
+                            if (selectedFare == value) {
+                              selectedFare = 0;
+                            } else {
+                              selectedFare = value;
+                            }
+                          });
+                        },
                         child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             height: 40,
@@ -582,6 +609,16 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
                   [
                     GestureDetector(
                       onTap: () async {
+                        bool isSelected = !fareOptions.contains(selectedFare) &&
+                            selectedFare != 0;
+                        if (isSelected) {
+                          setState(() {
+                            selectedFare = 0;
+                          });
+
+                          return;
+                        }
+
                         final TextEditingController controller =
                             TextEditingController();
 
@@ -818,10 +855,9 @@ class _BookRideVehicleScreenState extends State<BookRideVehicleScreen>
                   provider.rideDetailState = ApiResponse.loading();
                   if (isStatusSuccess(provider.rideCreateState.status)) {
                     provider.rideDetail(
-                      requestId:
-                          provider.rideCreateState.data?['id']?.toString() ??
-                              '',
-                    );
+                        requestId:
+                            provider.rideCreateState.data?['id']?.toString() ??
+                                '');
                     // ignore: use_build_context_synchronously
                     Navigator.push(context,
                         AppAnimations.zoomOut(const PartnerOnTheWayScreen()));

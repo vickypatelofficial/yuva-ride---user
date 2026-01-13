@@ -27,6 +27,7 @@ class CustomTextField extends StatelessWidget {
   final FocusNode? focusNode;
   final bool autofocus;
   final Color? fillColor;
+  final TextStyle? hintStyle;
 
   const CustomTextField({
     super.key,
@@ -48,7 +49,7 @@ class CustomTextField extends StatelessWidget {
     this.validator,
     this.focusNode,
     this.fillColor,
-    this.autofocus = false,
+    this.autofocus = false, this.hintStyle,
   });
 
   @override
@@ -69,9 +70,10 @@ class CustomTextField extends StatelessWidget {
       autofocus: autofocus,
       style: GoogleFonts.poppins(fontSize: 14, color: Colors.black),
       decoration: InputDecoration(
+        
         hintText: hint,
         counterText: "",
-        hintStyle: GoogleFonts.poppins(fontSize: 13, color: Colors.grey),
+        hintStyle: hintStyle?? GoogleFonts.poppins(fontSize: 13, color: Colors.grey),
         prefixIcon: prefixIcon,
         suffixIcon: suffixIcon,
         filled: true,

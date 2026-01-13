@@ -1,12 +1,6 @@
 // To parse this JSON data, do
 //
-//     final profileModel = profileModelFromJson(jsonString);
-
-import 'dart:convert';
-
-ProfileModel profileModelFromJson(String str) => ProfileModel.fromJson(json.decode(str));
-
-String profileModelToJson(ProfileModel data) => json.encode(data.toJson());
+//     final profileModel = profileModelFromJson(jsonString); 
 
 class ProfileModel {
     int? responseCode;

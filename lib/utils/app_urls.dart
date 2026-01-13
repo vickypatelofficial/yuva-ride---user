@@ -36,15 +36,18 @@ class AppUrl {
   static const String driverProfileDetail =
       '${customerBaseUrl}driver_profile_detail';
   static const String cancelRide = '${customerBaseUrl}vehicle_ride_cancel';
+  static const String cancelRideReason = '${customerBaseUrl}vehicle_cancel_reason';
+  static const String removeRideRequest= '${customerBaseUrl}remove_vehicle_request';
 
   static const String rideDetail = '$baseUrl/customer/cus_ride_detail';
+  static const String customerRunningRide = '$baseUrl/customer/get_running_ride';
   static const String chatList = '$baseUrl/chat/chat_list';
 
   static const String createRazorpayOrder =
       '${customerBaseUrl}create_razorpay_order';
 
   static const String completeOnlinePayment =
-      '${customerBaseUrl}complete_online_payment';
+      '${customerBaseUrl}complete_online_payment'; 
 
   static const String socketUrl = 'https://yuvaride.techlanditsolutions.com';
 

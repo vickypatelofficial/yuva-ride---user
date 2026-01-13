@@ -5,8 +5,10 @@ import 'package:provider/provider.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:yuva_ride/main.dart';
 import 'package:yuva_ride/models/driver_profile_model.dart';
+import 'package:yuva_ride/models/home/active_ride_model.dart';
 import 'package:yuva_ride/models/home/available_driver_model.dart';
 import 'package:yuva_ride/models/home/calculator_price_model.dart';
+import 'package:yuva_ride/models/home/cancel_ride_reason_model.dart';
 import 'package:yuva_ride/models/home/contact_model.dart';
 import 'package:yuva_ride/models/home/home_model.dart';
 import 'package:yuva_ride/models/home/payment_coupon_model.dart';
@@ -19,6 +21,7 @@ import 'package:yuva_ride/services/socket_services.dart';
 import 'package:yuva_ride/services/status.dart';
 import 'package:yuva_ride/utils/app_urls.dart';
 import 'package:yuva_ride/utils/globle_func.dart';
+import 'package:yuva_ride/view/screens/home/home_screen.dart';
 import 'package:yuva_ride/view/screens/ride_booking/after_booking/partener_on_the_way_screen.dart';
 import 'package:yuva_ride/view/screens/ride_booking/after_booking/ride_completed_screen.dart';
 
@@ -155,6 +158,8 @@ class BookRideProvider extends ChangeNotifier {
   }) async {
     driverProfileState = ApiResponse.loading();
     rideCreateState = ApiResponse.loading();
+    rideDetailState = ApiResponse.loading();
+    mapService.clearMap();
     notifyListeners();
 
     // getting available driver list
@@ -337,27 +342,59 @@ class BookRideProvider extends ChangeNotifier {
     activeRideRequestId = id;
   }
 
+  ApiResponse removeRideRequestState = ApiResponse.nothing();
+  Future<void> removeRideRequest(String requestId) async {
+    removeRideRequestState = ApiResponse.loading();
+    notifyListeners();
+    removeRideRequestState =
+        await _repo.removeRideRequest(requestId: requestId);
+    if (isStatusSuccess(removeRideRequestState.status)) {
+      _socket.emit("RequestTimeOut", {
+        "request_id":
+            requestId, // Mandatory: The ID of the ride request to remove
+        "uid":
+            await LocalStorage.getUserId() ?? '', // Mandatory: The Customer ID
+        "message": "Time out" // Optional: Just for logging
+      });
+    }
+    notifyListeners();
+  }
+
   //Cancel Ride
   ApiResponse cancelRideState = ApiResponse.nothing();
   Future<void> cancelRide(
-      {required String cancelId,
-      required String requestId,
-      required String lat,
-      required String lng}) async {
+      {required String cancelId, required String requestId}) async {
     cancelRideState = ApiResponse.loading();
     notifyListeners();
+    LatLng? currentLocation = await MapService.getCurrentLatLng();
     cancelRideState = await _repo.cancelRide(
         userId: await LocalStorage.getUserId() ?? "",
         cancelId: cancelId,
-        lat: lat,
-        lng: lng,
+        lat: currentLocation?.latitude.toString() ?? '',
+        lng: currentLocation?.longitude.toString() ?? '',
         requestId: requestId);
+
     if (isStatusSuccess(cancelRideState.status)) {
-      _socket.emit('Vehicle_Ride_Cancel', {
-        'uid': await LocalStorage.getUserId(),
-        'driverid': driverIds,
-      });
+      // when not accepted then will not emit\
+      if (rideDetailState.data?.requestData?.status != '0') {
+        _socket.emit('Vehicle_Ride_Cancel', {
+          'uid': await LocalStorage.getUserId(),
+          'driverid': driverIds,
+        });
+      }
     }
+    notifyListeners();
+  }
+
+  ApiResponse<CancelRideReasonModel> cancelRideReasonState =
+      ApiResponse.nothing();
+  Future<void> cancelRideReason() async {
+    if (isStatusSuccess(cancelRideReasonState.status)) {
+      return;
+    }
+    cancelRideReasonState = ApiResponse.loading();
+    notifyListeners();
+    cancelRideReasonState = await _repo.cancelRideReason();
     notifyListeners();
   }
 
@@ -369,6 +406,15 @@ class BookRideProvider extends ChangeNotifier {
     if (data.data != null) {
       rideDetailState = data;
     }
+    notifyListeners();
+  }
+
+  /// active ride
+  ApiResponse<ActiveRideModel> activeRideState = ApiResponse.loading();
+  Future<void> fetchUserActiveRide() async {
+    activeRideState = ApiResponse.loading();
+    notifyListeners();
+    activeRideState = await _repo.getUserActiveRide();
     notifyListeners();
   }
 
@@ -400,6 +446,7 @@ class BookRideProvider extends ChangeNotifier {
         await _repo.createRazorpayOrder(uid: uid, orderId: rideOrderId);
 
     if (isStatusSuccess(response.status)) {
+      joinCustomerRoom();
       _razorpayBackendOrderId = response.data['razorpay_order_id']?.toString();
       _razorpayService.openCheckout(
           key: "rzp_test_Rn3pWJq83UqioO",
@@ -414,16 +461,19 @@ class BookRideProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  emitPaymentSuccess(){
-    _socket.emit('online_payment_success', {
-      "order_id": "694",
-      "cart_id": "753",
-      "payment_status": 'completed',
-      "total_amount": "18.5",
-      "driver_earning": "6",
-      "payment_method": "9",
-      "completed_at":  DateTime.now().toString()
-    });
+  emitPaymentSuccess() {
+    // _socket.emit('online_payment_success', {
+    //   "order_id": "694",
+    //   "cart_id": "756",
+    //   "payment_status": 'completed',
+    //   "total_amount": "18.5",
+    //   "driver_earning": "6",
+    //   "payment_method": "9",
+    //   "completed_at": DateTime.now().toString()
+    // });
+    // _socket.emit('online_payment_success', {
+    //   "message": "Payment successful! Thank you.",
+    // });
   }
 
   Future<void> _onPaymentSuccess(PaymentSuccessResponse response) async {
@@ -431,7 +481,6 @@ class BookRideProvider extends ChangeNotifier {
 
     paymentState = ApiResponse.loading();
     notifyListeners();
-
     paymentState = await _repo.completeOnlinePayment(
       uid: uid,
       orderId: orderId ?? '', // taxi order id
@@ -469,50 +518,104 @@ class BookRideProvider extends ChangeNotifier {
 
   /////Map Section
   final MapService mapService = MapService();
-  Future<void> initMapFeatures(LatLng startLocation, LatLng endLocation) async {
-    await mapService.loadMapIcons(
+  Future<void> initMapFeatures({bool fitBoundOnly = false}) async {
+    final driverLocation = LatLng(
+      rideDetailState.data?.driverToCustomer?.driverLocation?.latitude ??
+        17.438911,
+      rideDetailState.data?.driverToCustomer?.driverLocation?.longitude ??
+        78.3983894);
+    final pickupLocation = MapService.parseLatLngSafe(
+        rideDetailState.data?.requestData?.picLatLong) ??
+      const LatLng(17.438911, 78.3983894);
+    
+    if (kDebugMode) {
+      debugPrint('🔹 initMapFeatures - Driver: $driverLocation');
+      debugPrint('🔹 initMapFeatures - Pickup: $pickupLocation');
+    }
+    
+    if (!fitBoundOnly) {
+      print('map icon loading');
+      await mapService.loadMapIcons(
         startLocationIcon: 'assets/images/bike.png',
         endLocationIcon: 'assets/images/green_marker.png');
-    mapService.setPickupDropMarkers(pickup: startLocation, drop: endLocation);
-    // final points = await mapService.getRoutePolyline(
-    //     pickupLatLng, dropLatLng, AppConstants.googleApiKey);
-    mapService.createRoutePolyline([startLocation, endLocation]);
+        print('map  setPickupDropMarkers');
+      mapService.setPickupDropMarkers(
+        pickup: driverLocation, drop: pickupLocation);
+        print('creating route');
+      await mapService.createRoutePolyline([driverLocation, pickupLocation]);
+    }
+
+    await Future.delayed(const Duration(milliseconds: 200));
+    await mapService.fitToPickupDrop(driverLocation, pickupLocation);
+    notifyListeners();
+  }
+
+  Future<void> arrivedPickup({bool fitBoundOnly = false}) async {
+    print('=======enter in map features========');
+    if (!fitBoundOnly) {
+      mapService.clearMap();
+      await mapService.loadPickup(icon: 'assets/images/green_marker.png');
+      await mapService.setPickupMarker(
+          pickup: MapService.parseLatLngSafe(
+              rideDetailState.data?.requestData?.picLatLong)!);
+    }
+    await mapService.moveCameraToTap(MapService.parseLatLngSafe(
+        rideDetailState.data?.requestData?.picLatLong)!);
+    notifyListeners();
+  }
+
+  Future<void> pickuDropMapFeatures({bool fitBoundOnly = false}) async {
+    final startLocation = MapService.parseLatLngSafe(
+            rideDetailState.data?.requestData?.picLatLong) ??
+        const LatLng(17.438911, 78.3983894);
+    final endLocation = MapService.parseLatLngSafe(
+            rideDetailState.data?.requestData?.dropLatLong) ??
+        const LatLng(17.438911, 78.3983894);
+    print('🔹 checkActiveRide: Start: $startLocation, End: $endLocation');
+    print('start location -  $startLocation');
+    print('end location - $endLocation');
+    print('=======loading icons========');
+    if (!fitBoundOnly) {
+      mapService.clearMap();
+      // notifyListeners();
+      // return;
+      await mapService.loadMapIcons();
+      print('setting dropdown and other markers');
+      mapService.setPickupDropMarkers(pickup: startLocation, drop: endLocation);
+
+      await mapService.addMarker(
+        markerId: 'driver',
+        position: startLocation,
+        iconPath: 'assets/images/bike.png',
+        iconSize: 90,
+      );
+      // final points = await mapService.getRoutePolyline(
+      //     pickupLatLng, dropLatLng, AppConstants.googleApiKey);
+      print('creating route polyline');
+      await mapService.createRoutePolyline([startLocation, endLocation]);
+    }
+
     await Future.delayed(const Duration(milliseconds: 200));
     await mapService.fitToPickupDrop(startLocation, endLocation);
     notifyListeners();
   }
 
-  Future<void> pickuDropMapFeatures(
-      LatLng startLocation, LatLng endLocation) async {
-    print('start location -  $startLocation');
-    print('end location - $endLocation');
-    print('=======loading icons========');
-    mapService.clearMap();
-    // notifyListeners();
-    // return;
-    await mapService.loadMapIcons();
-    print('setting dropdown and other markers');
-    mapService.setPickupDropMarkers(pickup: startLocation, drop: endLocation);
-
-    await mapService.addMarker(
-      markerId: 'driver',
-      position: startLocation,
-      iconPath: 'assets/images/bike.png',
-      iconSize: 90,
-    );
-    // final points = await mapService.getRoutePolyline(
-    //     pickupLatLng, dropLatLng, AppConstants.googleApiKey);
-    print('creating route polyline');
-    mapService.createRoutePolyline([startLocation, endLocation]);
-
-    await Future.delayed(const Duration(milliseconds: 200));
-    await mapService.fitToPickupDrop(startLocation, endLocation);
+  Future<void> setDropFeature({bool fitBoundOnly = false}) async {
+    final latLng = MapService.parseLatLngSafe(
+            rideDetailState.data?.requestData?.dropLatLong) ??
+        const LatLng(17.438911, 78.3983894);
+    if (!fitBoundOnly) {
+      mapService.clearMap();
+      mapService.polylines.clear();
+      mapService.setDropMarker(drop: latLng);
+    }
+    mapService.moveCamera(latLng);
     notifyListeners();
   }
 
   @override
   void dispose() {
-    mapService.mapController = null; // 🔥 VERY IMPORTANT
+    mapService.mapController = null; //
     super.dispose();
   }
 
@@ -528,7 +631,7 @@ class BookRideProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> init() async {
+  Future<void> initSocket() async {
     final uid = await LocalStorage.getUserId() ?? '';
 
     // 1️⃣ Connect socket
@@ -564,17 +667,9 @@ class BookRideProvider extends ChangeNotifier {
       await getDriverProfile(driverId: data['u_id']?.toString() ?? '');
       driverCurrentId = data['u_id']?.toString();
       await rideDetail(requestId: data['request_id']?.toString() ?? '');
-      final startLocation = LatLng(
-          rideDetailState.data?.driverToCustomer?.driverLocation?.latitude ??
-              17.438911,
-          rideDetailState.data?.driverToCustomer?.driverLocation?.longitude ??
-              78.3983894);
-      // const startLocation = LatLng(, 78.481039);
-      final endLocation = MapService.parseLatLngSafe(
-              rideDetailState.data?.requestData?.picLatLong) ??
-          const LatLng(17.438911, 78.3983894);
+
       print('map is creating');
-      initMapFeatures(startLocation, endLocation);
+      initMapFeatures();
     });
 
     _socket.on('Vehicle_D_IAmHere', (data) {
@@ -588,29 +683,47 @@ class BookRideProvider extends ChangeNotifier {
         showCustomToast(title: 'Driver Arrived at pickup location');
       }
       driverId = data["u_id"]?.toString() ?? '';
-      rideDetail(
-        requestId: data["request_id"]?.toString() ?? '',
-      );
+      try {
+        rideDetail(
+          requestId: data["request_id"]?.toString() ?? '',
+        );
+      } catch (e) {
+        print(e.toString());
+      }
+      arrivedPickup();
     });
 
     _socket.on('Vehicle_Ride_Start_End$uid', (data) async {
       print('✅ Driver Vehicle_Ride_Start ride');
-      final startLocation = MapService.parseLatLngSafe(
-              rideDetailState.data?.requestData?.picLatLong) ??
-          const LatLng(17.438911, 78.3983894);
-      // const startLocation = LatLng(, 78.481039);
-      final endLocation = MapService.parseLatLngSafe(
-              rideDetailState.data?.requestData?.dropLatLong) ??
-          const LatLng(17.438911, 78.3983894);
-      await rideDetail(
-        requestId: data?['request_id']?.toString() ?? '',
-      );
-      pickuDropMapFeatures(startLocation, endLocation);
+
+      // get ride detail
+      await rideDetail(requestId: rideDetailState.data?.requestTableId ?? '');
+      // map animations
+      if (rideDetailState.data?.requestData?.status == '5') {
+        pickuDropMapFeatures();
+      } else if (rideDetailState.data?.requestData?.status == '7') {
+        setDropFeature();
+        if (navigatorKey.currentContext != null) {
+          showRideEndNotifyDialog(navigatorKey.currentContext!);
+        }
+      }
+    });
+    _socket.on('RequestTimeOut', (data) async {
+      print('✅ Driver Vehicle_Ride_Start ride');
+      Future.delayed(const Duration(seconds: 1), () {
+        showAddMoreTipDialog(context: navigatorKey.currentContext!);
+      });
+      Navigator.maybePop(navigatorKey.currentContext!);
     });
 
     // ❌ Ride cancelled
     _socket.on('Vehicle_Ride_Cancel', (data) {
       print('❌ Ride cancelled');
+      final context = navigatorKey.currentContext!;
+      Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+          (_) => false);
     });
 
     _socket.on('Ride_Complete_Notify', (data) {
@@ -642,6 +755,10 @@ class BookRideProvider extends ChangeNotifier {
     _socket.on('driver_location_update', (data) {
       print('📍 Driver location update');
     });
+  }
+
+  joinCustomerRoom() async {
+    _socket.joinCustomerRoom((await LocalStorage.getUserId()) ?? '');
   }
 
   emitCreateBooking({

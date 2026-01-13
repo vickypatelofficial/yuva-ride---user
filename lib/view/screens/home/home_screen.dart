@@ -4,7 +4,11 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/foundation.dart';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:yuva_ride/provider/auth_provider.dart';
+import 'package:yuva_ride/provider/book_ride_provider.dart';
 import 'package:yuva_ride/services/local_storage.dart';
+import 'package:yuva_ride/utils/globle_func.dart';
 import 'package:yuva_ride/view/custom_widgets/cusotm_back.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_inkwell.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_scaffold_utils.dart';
@@ -15,6 +19,7 @@ import 'package:yuva_ride/services/map_services.dart';
 import 'package:yuva_ride/utils/animations.dart';
 import 'package:yuva_ride/utils/app_colors.dart';
 import 'package:yuva_ride/view/screens/home/navbar/navbar_screen.dart';
+import 'package:yuva_ride/view/screens/ride_booking/after_booking/partener_on_the_way_screen.dart';
 
 import 'package:yuva_ride/view/screens/ride_booking/book_ride/selection_location_book_screen.dart';
 import 'package:yuva_ride/view/screens/ride_sharing/share_ride/selection_location_share_screen.dart';
@@ -34,6 +39,76 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadMarkers();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      checkActiveRide();
+      context.read<AuthProvider>().fetchProfile();
+    });
+  }
+
+  checkActiveRide() async {
+    try {
+      print('🔹 checkActiveRide: Starting...');
+      final provider = context.read<BookRideProvider>();
+      print('🔹 checkActiveRide: Provider initialized');
+      
+      await provider.fetchUserActiveRide();
+      print('🔹 checkActiveRide: fetchUserActiveRide completed');
+      print('🔹 checkActiveRide: activeRideState = ${provider.activeRideState}');
+      
+      final ride = provider.activeRideState.data?.data;
+      print('🔹 checkActiveRide: ride = $ride');
+
+      if (ride != null) {
+        print('🔹 checkActiveRide: Ride found - ID: ${ride.requestId}, Status: ${ride.status}');
+        
+        provider.initSocket();
+        print('🔹 checkActiveRide: Socket initialized');
+        
+        await provider.rideDetail(requestId: ride.requestId!);
+        print('🔹 checkActiveRide: rideDetail fetched');
+        
+        if (ride.driverId != null) {
+          print('🔹 checkActiveRide: Fetching driver profile - driverId: ${ride.driverId}');
+          provider.getDriverProfile(driverId: ride.driverId!);
+        } else {
+          print('🔹 checkActiveRide: No driver ID available');
+        }
+
+        // if (ride.status == '0') {
+        //   print('🔹 checkActiveRide: Status 0 - Ride accepted');
+        //   if (parseLatLng(ride.pickupLatLong) != null &&
+        //       parseLatLng(ride.dropLatLong) != null) {
+        //     print('🔹 checkActiveRide: Valid pickup/drop coordinates');
+        //   }
+        // } else if (ride.status == '1') {
+        //   print('🔹 checkActiveRide: Status ${ride.status} - Driver on way');
+        //   provider.initMapFeatures();
+        // }
+        // else if( ride.status == '2' || ride.status == '3'){
+        //    provider.arrivedPickup();
+        // }
+        
+        //  else if (ride.status == '5' || ride.status == '6' || ride.status == '7') {
+        //   provider.pickuDropMapFeatures();
+        // } else {
+        //   print('🔹 checkActiveRide: Unknown status - ${ride.status}');
+        // }
+
+        print('🔹 checkActiveRide: Navigating to PartnerOnTheWayScreen');
+        Navigator.pushReplacement(
+          // ignore: use_build_context_synchronously
+          context,
+          MaterialPageRoute(
+            builder: (_) => const PartnerOnTheWayScreen(),
+          ),
+        );
+      } else {
+        print('🔹 checkActiveRide: No active ride found');
+      }
+    } catch (e) {
+      print('❌ checkActiveRide: Error - $e');
+      print('❌ checkActiveRide: Stack trace - ${StackTrace.current}');
+    }
   }
 
   Future<void> _loadMarkers() async {
@@ -54,7 +129,7 @@ class _HomeScreenState extends State<HomeScreen> {
   LatLngBounds _boundsFromMarkers(Set<Marker> markers) {
     final lats = markers.map((m) => m.position.latitude);
     final lngs = markers.map((m) => m.position.longitude);
-    
+
     return LatLngBounds(
       southwest: LatLng(lats.reduce(min), lngs.reduce(min)),
       northeast: LatLng(lats.reduce(max), lngs.reduce(max)),
@@ -95,7 +170,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   //         color: Colors.white,
                   //       ),
                   // ),
-                  child: Image.asset('assets/images/logo.png',height: 70,width: 70),
+                  child: Image.asset('assets/images/logo.png',
+                      height: 70, width: 70),
                 ),
                 const Spacer(),
                 Container(
@@ -177,15 +253,13 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 SizedBox(
                   height: 300,
-                  
                   child: GoogleMap(
                     onTap: (argument) {
                       print(argument.toString());
                     },
-                    onMapCreated: (controller){
+                    onMapCreated: (controller) {
                       mapService.initController(controller);
-                      Future.delayed(const Duration(milliseconds: 500),
-                      (){
+                      Future.delayed(const Duration(milliseconds: 500), () {
                         mapService.moreIconCamereraAnimation();
                       });
                     },
@@ -198,14 +272,27 @@ class _HomeScreenState extends State<HomeScreen> {
                     myLocationButtonEnabled: false,
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.only(),
-                  child: Image.asset(
-                    "assets/images/pickup_icon.png",
-                    height: 25,
-                    width: 25,
+                Positioned(
+                  bottom: 130,
+                  right: 16,
+                  child: FloatingActionButton(
+                    backgroundColor: Colors.white,
+                    child: const Icon(Icons.my_location, color: Colors.black),
+                    onPressed: () {
+                      Future.delayed(const Duration(milliseconds: 500), () {
+                        mapService.moreIconCamereraAnimation();
+                      });
+                    },
                   ),
                 ),
+                // Padding(
+                //   padding: const EdgeInsets.only(),
+                //   child: Image.asset(
+                //     "assets/images/pickup_icon.png",
+                //     height: 25,
+                //     width: 25,
+                //   ),
+                // ),
                 Padding(
                   padding: const EdgeInsets.only(top: 240, left: 10, right: 10),
                   child: Row(

@@ -37,9 +37,10 @@ class MapService {
   // pickup & drop icons
   BitmapDescriptor? startLocation;
   BitmapDescriptor? endLocation;
+  BitmapDescriptor? pickupLocation;
 
   // initialize controller
-  void initController(GoogleMapController controller) {
+  void  initController(GoogleMapController controller) {
     mapController = controller;
   }
 
@@ -62,38 +63,38 @@ class MapService {
     return true;
   }
 
-  
-Future<void> addMarker({
-  required String markerId,
-  required LatLng position,
-  String? iconPath,
-  int iconSize = 80,
-}) async {
-  BitmapDescriptor icon;
+  Future<void> addMarker({
+    required String markerId,
+    required LatLng position,
+    String? iconPath,
+    int iconSize = 80,
+  }) async {
+    BitmapDescriptor icon;
 
-  if (iconPath != null) {
-    icon = await getResizedMarker(iconPath, iconSize);
-  } else {
-    icon = BitmapDescriptor.defaultMarker;
+    if (iconPath != null) {
+      icon = await getResizedMarker(iconPath, iconSize);
+    } else {
+      icon = BitmapDescriptor.defaultMarker;
+    }
+
+    markers.add(
+      Marker(
+        markerId: MarkerId(markerId),
+        position: position,
+        icon: icon,
+        anchor: const Offset(0.5, 1.0),
+      ),
+    );
   }
 
-  markers.add(
-    Marker(
-      markerId: MarkerId(markerId),
-      position: position,
-      icon: icon,
-      anchor: const Offset(0.5, 1.0),
-    ),
-  );
-}
-   void clearAllMarkers() {
-  markers.clear();
-}
+  void clearAllMarkers() {
+    markers.clear();
+  }
 
-void clearMap() {
-  markers.clear();
-  polylines.clear();
-}
+  void clearMap() {
+    markers.clear();
+    polylines.clear();
+  }
 
   /// Get current LatLng
   static Future<LatLng?> getCurrentLatLng() async {
@@ -133,6 +134,12 @@ void clearMap() {
         endLocationIcon ?? "assets/images/drop_location.png", 110);
   }
 
+    
+   Future<void> loadPickup({String? icon}) async {
+    pickupLocation = await getResizedMarker(
+      icon??  "assets/images/pickup_location.png", 110); 
+  }
+
   // add pickup & drop markers
   void setPickupDropMarkers({
     required LatLng pickup,
@@ -157,16 +164,50 @@ void clearMap() {
     };
   }
 
-  // add polyline route
-  void createRoutePolyline(List<LatLng> routePoints) {
-    polylines = {
-      Polyline(
-        polylineId: const PolylineId("route"),
-        color: AppColors.black,
-        width: 5,
-        points: routePoints,
-      )
+  // set drop marker
+  void setDropMarker({
+    required LatLng drop,
+  }) {
+    markers = {
+      Marker(
+        markerId: const MarkerId("end"),
+        position: drop,
+        icon: endLocation ??
+            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        anchor: const Offset(0.5, 1.0), // FIX
+      ),
     };
+  }
+
+      // set pickup marker
+   setPickupMarker({
+    required LatLng pickup,
+  }) async{
+    markers = {
+      Marker(
+        markerId: const MarkerId("start"),
+        position: pickup,
+        icon: pickupLocation ??
+            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        anchor: const Offset(0.5, 1.0), // FIX
+      ),
+    };
+  }
+
+  // add polyline route
+  Future createRoutePolyline(List<LatLng> routePoints) async {
+    if (routePoints.length >= 2) {
+      final points = await getRoutePolyline(
+          routePoints[0], routePoints[1], Constants.mapkey);
+      polylines = {
+        Polyline(
+          polylineId: const PolylineId("route"),
+          color: AppColors.black,
+          width: 5,
+          points: points,
+        )
+      };
+    }
   }
 
   // getRoute Polyline
@@ -255,7 +296,7 @@ void clearMap() {
   }
 
   // Advanced camera animation
-  Future<void>  runAdvancedCameraAnimation() async {
+  Future<void> runAdvancedCameraAnimation() async {
     if (mapController == null) return;
 
     const LatLng center = LatLng(17.4486, 78.3908);
@@ -296,8 +337,8 @@ void clearMap() {
     );
   }
 
-   // Advanced camera animation
-  Future<void>  moreIconCamereraAnimation() async {
+  // Advanced camera animation
+  Future<void> moreIconCamereraAnimation() async {
     if (mapController == null) return;
 
     const LatLng center = LatLng(17.408151707455986, 78.4787243977189);
@@ -309,7 +350,7 @@ void clearMap() {
         tilt: 0,
         bearing: 0,
       )),
-    ); 
+    );
     await Future.delayed(const Duration(milliseconds: 300));
 
     await mapController!.animateCamera(
@@ -425,7 +466,6 @@ void clearMap() {
     // ignore: deprecated_member_use
     return BitmapDescriptor.fromBytes(resizedBytes);
   }
- 
 
   Future<void> setupRoute({
     required LatLng pickup,
@@ -433,6 +473,7 @@ void clearMap() {
   }) async {
     markers.clear();
     polylines.clear();
+    // return;
 
     markers.add(
       Marker(
@@ -467,8 +508,6 @@ void clearMap() {
 
     await fitToPickupDrop(pickup, drop);
   }
-
- 
 
   // Load multiple markers (bikes / autos / cars)
   Future<Set<Marker>> loadVehicleMarkers() async {
@@ -539,7 +578,8 @@ void clearMap() {
       "${p.name}, ${p.subLocality}, ${p.locality}, ${p.administrativeArea}, ${p.country}";
       return LocationModel(latLng,
           "${p.name}, ${p.subLocality}, ${p.locality}, ${p.administrativeArea}, ${p.country}",
-          title:'${p.name}, ${p.subLocality}, ${p.locality}', subtitle: '${p.administrativeArea}, ${p.country}');
+          title: '${p.name}, ${p.subLocality}, ${p.locality}',
+          subtitle: '${p.administrativeArea}, ${p.country}');
     } catch (e) {
       print(e.toString());
     }
@@ -602,7 +642,7 @@ void clearMap() {
       final String request =
           '$baseURL?input=$input&key=${Constants.mapkey}&sessiontoken=$_sessionToken';
 
-      if (kDebugMode){
+      if (kDebugMode) {
         debugPrint("Places API: $request");
       }
 
@@ -625,7 +665,8 @@ void clearMap() {
 
   Future<LatLng?> getLatLngFromPlaceId(String placeId) async {
     try {
-      const String baseURL = 'https://maps.googleapis.com/maps/api/place/details/json';
+      const String baseURL =
+          'https://maps.googleapis.com/maps/api/place/details/json';
 
       final String request =
           '$baseURL?place_id=$placeId&key=${Constants.mapkey}';

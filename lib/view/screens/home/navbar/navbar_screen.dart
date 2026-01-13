@@ -1,5 +1,6 @@
-
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:yuva_ride/provider/auth_provider.dart';
 import 'package:yuva_ride/services/local_storage.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_scaffold_utils.dart';
 import 'package:yuva_ride/utils/animations.dart';
@@ -55,10 +56,14 @@ class ProfileMenuScreen extends StatelessWidget {
                 Positioned(
                   top: height * .02 + 30,
                   left: width * .04,
-                  child: CircleAvatar(
-                    radius: width * .05,
-                    backgroundColor: Colors.white.withOpacity(.3),
-                    child: const Icon(Icons.close, color: Colors.white),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(40),
+                    onTap: () => Navigator.pop(context),
+                    child: CircleAvatar(
+                      radius: width * .05,
+                      backgroundColor: Colors.white.withOpacity(.3),
+                      child: const Icon(Icons.close, color: Colors.white),
+                    ),
                   ),
                 ),
 
@@ -85,29 +90,33 @@ class ProfileMenuScreen extends StatelessWidget {
                   ),
                 ),
 
-                Positioned(
-                  top: height * .12,
-                  left: width * .05,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Shiva Kumar",
-                        style: text.titleLarge!.copyWith(
-                            color: Colors.white, fontFamily: AppFonts.medium),
-                      ),
-                      SizedBox(height: height * .005),
-                      Text(
-                        "+917685868587",
-                        style: text.bodyMedium!.copyWith(color: Colors.white70),
-                      ),
-                      Text(
-                        "Shivakumar348@gmail.com",
-                        style: text.bodyMedium!.copyWith(color: Colors.white70),
-                      )
-                    ],
-                  ),
-                ),
+                Consumer<AuthProvider>(builder: (context, provider, _) {
+                  return Positioned(
+                    top: height * .12,
+                    left: width * .05,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          provider.profileState.data?.customerData?.name ?? '',
+                          style: text.titleLarge!.copyWith(
+                              color: Colors.white, fontFamily: AppFonts.medium),
+                        ),
+                        SizedBox(height: height * .005),
+                        Text(
+                          "${provider.profileState.data?.customerData?.countryCode ?? ''}${provider.profileState.data?.customerData?.phone ?? ''}",
+                          style:
+                              text.bodyMedium!.copyWith(color: Colors.white70),
+                        ),
+                        Text(
+                          provider.profileState.data?.customerData?.email ?? '',
+                          style:
+                              text.bodyMedium!.copyWith(color: Colors.white70),
+                        )
+                      ],
+                    ),
+                  );
+                }),
               ],
             ),
 

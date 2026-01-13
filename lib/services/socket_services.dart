@@ -43,6 +43,18 @@ class SocketService {
     });
   }
 
+  void joinDriverRoom(String driverId) {
+    final room = "driver_$driverId";
+    print("🔗 Joining room: $room");
+    _socket?.emit("join", room);
+  }
+
+  void joinCustomerRoom(String customerId) {
+    final room = "customer_$customerId";
+    print("🔗 Joining room: $room");
+    _socket?.emit("join", room);
+  }
+
   // listen event
   void on(String event, Function(dynamic data) callback) {
     print("🎧 LISTEN CALLED for event → $event");

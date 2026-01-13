@@ -10,8 +10,9 @@ import 'package:yuva_ride/view/custom_widgets/customTextField.dart';
 
 class SelectLocationMapScreen extends StatefulWidget {
   const SelectLocationMapScreen(
-      {super.key, required this.onSelectLocation, required this.latLng});
+      {super.key, required this.onSelectLocation, required this.latLng, required this.type});
   final LatLng? latLng;
+  final String type;
   final Function(LatLng data, String address, String titile, String subtitle)?
       onSelectLocation;
 
@@ -42,27 +43,30 @@ class _SelectLocationMapScreenState extends State<SelectLocationMapScreen> {
   @override
   void initState() {
     super.initState();
-    _loadCurrentLocation();
+    if (widget.latLng == null) {
+      _loadCurrentLocation(null);
+    }else{
+       _loadCurrentLocation(widget.latLng);
+    }
   }
 
-  Future<void> _loadCurrentLocation() async {
+  Future<void> _loadCurrentLocation(LatLng? latlng,{bool isTapped = false}) async {
     LatLng? latLng;
-    if (widget.latLng == null) {
-      latLng = await MapService.getCurrentLatLng();
-    } else {
-      latLng = widget.latLng;
-    }
+    latLng = latlng?? await MapService.getCurrentLatLng();
 
     if (latLng != null && mounted) {
       LocationModel? location = await MapService.getAddressFromLatLng(latLng);
       setState(() {
         selectedPosition = latLng!;
         pickupAddress = location?.address ?? "";
+        if(isTapped){
+
+        textEditingController.text = location?.address??'';
+        }
         title = location?.title ?? "";
         subtitle = location?.subtitle ?? "";
       });
     }
-
     // Move camera to tapped position
     await _mapService.moveCamera(selectedPosition);
 
@@ -162,6 +166,7 @@ class _SelectLocationMapScreenState extends State<SelectLocationMapScreen> {
                   focusNode: _focusNode,
                   hint: 'Search location',
                   borderRadius: 28,
+                  hintStyle: Theme.of(context).textTheme.bodyLarge,
                   controller: textEditingController,
                   suffixIcon: IconButton(
                       onPressed: () {
@@ -181,6 +186,44 @@ class _SelectLocationMapScreenState extends State<SelectLocationMapScreen> {
                     });
                   },
                 ),
+                const SizedBox(height: 10),
+                if (suggestions.isEmpty)
+                  GestureDetector(
+                    onTap: () async {
+                      // call your existing current location function
+                      _loadCurrentLocation(null,isTapped: true);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.grey.shade300),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.my_location, color: Colors.blue, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Use current location',
+                            style: TextStyle(
+                              color: Colors.blue,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 const SizedBox(height: 10),
                 if (textEditingController.text.isNotEmpty &&
                     suggestions.isNotEmpty)
@@ -275,7 +318,7 @@ class _SelectLocationMapScreenState extends State<SelectLocationMapScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Pickup location",
+                    Text(widget.type=='pickup'? "Pickup location": "Drop location",
                         style: text.bodyMedium!.copyWith(
                             color: Colors.white, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 6),
@@ -298,7 +341,7 @@ class _SelectLocationMapScreenState extends State<SelectLocationMapScreen> {
               child: GestureDetector(
                 onTap: () {
                   widget.onSelectLocation!(
-                      selectedPosition, pickupAddress, title, subtitle); 
+                      selectedPosition, pickupAddress, title, subtitle);
                   print('title- $title');
                   print('subtitle - $subtitle');
                   print('pickupAddress - $pickupAddress');

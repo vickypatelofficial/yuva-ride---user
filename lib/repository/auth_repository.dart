@@ -1,5 +1,6 @@
 import 'package:yuva_ride/models/profile_model.dart';
 import 'package:yuva_ride/services/api_services.dart';
+import 'package:yuva_ride/services/local_storage.dart';
 import 'package:yuva_ride/services/status.dart';
 import 'package:yuva_ride/utils/app_urls.dart';
 
@@ -93,11 +94,9 @@ class AuthRepository {
   }
 
   /// 🔹 5. GET CUSTOMER PROFILE
-  Future<ApiResponse<ProfileModel>> getCustomerProfile({
-    required String userId,
-  }) async {
-    return ApiResponse.success(profileModelFromJson(await _apiService.get(
-      AppUrl.getCustomer(userId),
-    ) as String));
+  Future<ApiResponse<ProfileModel>> getCustomerProfile() async {
+    return ApiResponse.success(ProfileModel.fromJson((await _apiService.get(
+      AppUrl.getCustomer(await LocalStorage.getUserId() ?? ""),
+    )).data));
   }
 }

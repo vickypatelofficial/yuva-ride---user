@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_scaffold_utils.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
@@ -51,6 +52,25 @@ Future<void> openDialer(String phoneNumber) async {
 pop(context) {
   Navigator.pop(context);
 }
+
+LatLng? parseLatLng(String? value) {
+  if (value == null || value.isEmpty) return null;
+
+  try {
+    final parts = value.split('&!');
+    if (parts.length != 2) return null;
+
+    final lat = double.tryParse(parts[0]);
+    final lng = double.tryParse(parts[1]);
+
+    if (lat == null || lng == null) return null;
+
+    return LatLng(lat, lng);
+  } catch (_) {
+    return null;
+  }
+}
+
 
 
 

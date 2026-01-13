@@ -36,7 +36,7 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
   @override
   void initState() {
     super.initState();
-
+    context.read<BookRideProvider>().mapService.clearMap();
     _startPopupTimer(context);
     // startRideTimer();
   }
@@ -54,108 +54,24 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
   Timer? _popupTimer;
 
   void _startPopupTimer(BuildContext context) {
-    _popupTimer = Timer(const Duration(minutes: 1), () {
-      if (context.read<BookRideProvider>().rideDetailState.data?.cartTableId ==
-              null ||
-          (context.read<BookRideProvider>().rideDetailState.data?.cartTableId ??
-                      '')
-                  .isEmpty &&
+    //
+    final provider = context.read<BookRideProvider>();
+    _popupTimer = Timer(const Duration(minutes: 1), () async {
+      if (provider.rideDetailState.data?.cartTableId == null ||
+          (provider.rideDetailState.data?.cartTableId ?? '').isEmpty &&
               mounted) {
-        Future.delayed(const Duration(seconds: 1), () {
-          showAddMoreTipDialog(context: navigatorKey.currentContext!);
-        });
-        Navigator.maybePop(context);
+        await provider.removeRideRequest(
+            provider.rideDetailState.data?.requestTableId ?? '');
+        if (isStatusSuccess(provider.removeRideRequestState.status)) {
+          Future.delayed(const Duration(seconds: 1), () {
+            showAddMoreTipDialog(context: navigatorKey.currentContext!);
+          });
+          Navigator.maybePop(context);
+        }
       } else {
         _stopPopupTimer();
       }
     });
-  }
-
-  void showAddMoreTipDialog({
-    required BuildContext context,
-  }) {
-    if (!context.mounted) return;
-
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (_) {
-        return Center(
-          child: Material(
-            color: Colors.transparent,
-            child: Container(
-              width: MediaQuery.of(context).size.width * 0.85,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(22),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.12),
-                    blurRadius: 18,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-              child: Stack(
-                children: [
-                  // 🧾 Content
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const SizedBox(height: 10),
-                      const Text(
-                        "Want faster ride acceptance?",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        "Adding a small extra tip may help drivers accept your ride sooner.",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.black54,
-                          height: 1.4,
-                        ),
-                      ),
-                      const SizedBox(height: 22),
-
-                      // ✅ OK Button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 44,
-                        child: ElevatedButton(
-                          onPressed: () => Navigator.maybePop(context),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primaryColor,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 0,
-                          ),
-                          child: const Text(
-                            "Okay",
-                            style: TextStyle(
-                              fontSize: 15,
-                              color: AppColors.white,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
   }
 
   void _stopPopupTimer() {
@@ -173,7 +89,6 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
   Widget build(BuildContext context) {
     final bookRideProvider = context.read<BookRideProvider>();
     final text = Theme.of(context).textTheme;
-
     return CustomScaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -188,22 +103,11 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
             CustomBack(onTap: () async {
               Navigator.pop(context);
               return;
-              // return;
-              final startLocation = MapService.parseLatLngSafe(bookRideProvider
-                  .rideDetailState.data?.requestData?.picLatLong);
-              // const startLocation = LatLng(, 78.481039);
-              final endLocation = MapService.parseLatLngSafe(bookRideProvider
-                  .rideDetailState.data?.requestData?.dropLatLong);
-              print('map is creating');
-              bookRideProvider.pickuDropMapFeatures(
-                  startLocation!, endLocation!);
-              // bookRideProvider.pickuDropMapFeatures(
-              //     LatLng(17.418367, 78.459889),
-              //     LatLng(17.43890396188094, 78.39839525520802));
             }),
             const SizedBox(width: 12),
             InkWell(
               onTap: () {
+                // bookRideProvider.initMapFeatures();
                 // bookRideProvider.getDriverProfile(driverId: '225');
                 // bookRideProvider.getAvailableDrivers();
                 // bookRideProvider.initMapFeatures(startLocation, endLocation);
@@ -244,22 +148,113 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
               bottom: 0,
               child: Stack(
                 children: [
-                  SizedBox(
-                    height: 300,
-                    child: GoogleMap(
-                      onMapCreated: (c) {
-                        bookRideProvider.mapService.initController(c);
-                      },
-                      initialCameraPosition: CameraPosition(
-                        target: bookRideProvider.pickupLocation?.latLng ??
-                            const LatLng(17.4065, 78.4772),
-                        zoom: 14.5,
+                  Stack(
+                    children: [
+                      Consumer<BookRideProvider>(
+                          builder: (context, provider, child) {
+                        return SizedBox(
+                          height: 300,
+                          child: GoogleMap(
+                            onMapCreated: (c) {
+                              print('+++++++++map initialize here++++');
+                              bookRideProvider.mapService.initController(c);
+                              final requestData = bookRideProvider
+                                  .rideDetailState.data!.requestData;
+                              if (requestData?.status == '0') {
+                                print(
+                                    '🔹user checkActiveRide: Status 0 - Ride accepted');
+                                if (parseLatLng(requestData?.picLatLong) !=
+                                        null &&
+                                    parseLatLng(requestData?.dropLatLong) !=
+                                        null) {
+                                  print(
+                                      '🔹user checkActiveRide: Valid pickup/drop coordinates');
+                                }
+                              } else if (requestData?.status == '1') {
+                                print(
+                                    '🔹user checkActiveRide: Status ${requestData?.status} - Driver on way');
+                                bookRideProvider.initMapFeatures();
+                              } else if (requestData?.status == '2' ||
+                                  requestData?.status == '3') {
+                                bookRideProvider.arrivedPickup();
+                              } else if (requestData?.status == '5' ||
+                                  requestData?.status == '6') {
+                                print('user pickup drops');
+                                bookRideProvider.pickuDropMapFeatures();
+                              } else {
+                                bookRideProvider.setDropFeature();
+                                showRideEndNotifyDialog(
+                                    navigatorKey.currentContext!);
+                                print(
+                                    '🔹 checkActiveRide: Unknown status - ${requestData?.status}');
+                              }
+                              Future.delayed(const Duration(seconds: 2), () {
+                                setState(() {
+                                  if (requestData?.status == '1') {
+                                    bookRideProvider.initMapFeatures(
+                                        fitBoundOnly: true);
+                                  }
+                                });
+                              });
+                            },
+                            initialCameraPosition: CameraPosition(
+                              target: bookRideProvider.pickupLocation?.latLng ??
+                                  const LatLng(17.4065, 78.4772),
+                              zoom: 14.5,
+                            ),
+                            markers: bookRideProvider.mapService.markers,
+                            polylines: bookRideProvider.mapService.polylines,
+                            zoomControlsEnabled: false,
+                            myLocationButtonEnabled: false,
+                            myLocationEnabled: true,
+                          ),
+                        );
+                      }),
+                      Positioned(
+                        bottom: 10,
+                        right: 16,
+                        child: FloatingActionButton(
+                          backgroundColor: Colors.white,
+                          child: const Icon(Icons.my_location,
+                              color: Colors.black),
+                          onPressed: () async {
+                            final requestData = bookRideProvider
+                                .rideDetailState.data!.requestData;
+                            if (requestData?.status == '0') {
+                              print(
+                                  '🔹 checkActiveRide: Status 0 - Ride accepted');
+                              if (parseLatLng(requestData?.picLatLong) !=
+                                      null &&
+                                  parseLatLng(requestData?.dropLatLong) !=
+                                      null) {
+                                print(
+                                    '🔹 checkActiveRide: Valid pickup/drop coordinates');
+                              }
+                            } else if (requestData?.status == '1') {
+                              print(
+                                  '🔹 checkActiveRide: Status ${requestData?.status} - Driver on way');
+                              bookRideProvider.initMapFeatures(
+                                  fitBoundOnly: true);
+                            } else if (requestData?.status == '2' ||
+                                requestData?.status == '3') {
+                              bookRideProvider.arrivedPickup(
+                                  fitBoundOnly: true);
+                            } else if (requestData?.status == '5' ||
+                                requestData?.status == '6') {
+                              bookRideProvider.pickuDropMapFeatures(
+                                  fitBoundOnly: true);
+                            } else {
+                              bookRideProvider.setDropFeature(
+                                  fitBoundOnly: true);
+                              showRideEndNotifyDialog(
+                                  navigatorKey.currentContext!);
+                              print(
+                                  '🔹 checkActiveRide: Unknown status - ${requestData?.status}');
+                            }
+                          },
+                        ),
                       ),
-                      markers: bookRideProvider.mapService.markers,
-                      polylines: bookRideProvider.mapService.polylines,
-                      zoomControlsEnabled: false,
-                      myLocationButtonEnabled: false,
-                    ),
+                    ],
                   ),
                   if (!isStatusSuccess(
                       bookRideProvider.driverProfileState.status))
@@ -580,36 +575,49 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
                       // const SizedBox(height: 12),
                       _paymentSection(text),
                       const SizedBox(height: 30),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 18),
-                        child: InkWell(
-                          onTap: () {
-                            {
-                              Navigator.push(
-                                  context,
-                                  AppAnimations.slideBottomToTop(
-                                      const CancelRideReasonScreen()));
-                            }
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              color: const Color(0xffFADCDC).withOpacity(.7),
-                              borderRadius: BorderRadius.circular(30),
-                              border: Border.all(color: Colors.red, width: 1.4),
-                            ),
-                            child: Center(
-                              child: Text(
-                                "Cancel ride",
-                                style: text.titleMedium!.copyWith(
-                                    color: Colors.red,
-                                    fontFamily: AppFonts.medium),
+                      Consumer<BookRideProvider>(
+                          builder: (context, provider, _) {
+                        String status = bookRideProvider
+                                .rideDetailState.data?.requestData?.status ??
+                            '';
+                        if (status == '1' || status == '2') {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 18),
+                            child: InkWell(
+                              onTap: () {
+                                {
+                                  Navigator.push(
+                                      context,
+                                      AppAnimations.slideBottomToTop(
+                                          const CancelRideReasonScreen()));
+                                }
+                              },
+                              child: Container(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color:
+                                      const Color(0xffFADCDC).withOpacity(.7),
+                                  borderRadius: BorderRadius.circular(30),
+                                  border:
+                                      Border.all(color: Colors.red, width: 1.4),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    "Cancel ride",
+                                    style: text.titleMedium!.copyWith(
+                                        color: Colors.red,
+                                        fontFamily: AppFonts.medium),
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                      ),
+                          );
+                        } else {
+                          return SizedBox();
+                        }
+                      }),
                       const SizedBox(height: 40),
                     ],
                   ),
@@ -619,119 +627,6 @@ class _PartnerOnTheWayScreenState extends State<PartnerOnTheWayScreen> {
           ],
         );
       }),
-    );
-  }
-
-  // ---------------------------------------------------------
-  // PARTNER DETAILS
-  // ---------------------------------------------------------
-  Widget _partnerDetails(TextTheme text) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.symmetric(horizontal: 18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(.05),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          )
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          /// TOP ROW — Avatar + Name + Subtitle
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: Colors.grey.shade300,
-                backgroundImage: AssetImage('assets/images/profile_image.png'),
-              ),
-              const SizedBox(width: 14),
-
-              /// Name + Subtitle
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Partner Suresh kumar",
-                      style: text.titleMedium!.copyWith(
-                        fontFamily: AppFonts.medium,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-
-                    /// Subtitle — overflow FIXED
-                    Text(
-                      "Our partner will speak in Telugu, English",
-                      style: text.bodySmall!.copyWith(
-                        color: Colors.black.withOpacity(.6),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis, // prevents overflow
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 14),
-
-          /// RATING + TRIPS
-          Row(
-            children: [
-              Row(
-                children: [
-                  Image.asset(
-                    "assets/images/star.png",
-                    height: 18,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      height: 18,
-                      width: 18,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    "2.5 Rating",
-                    style: text.bodySmall!.copyWith(
-                      color: Colors.black,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 26),
-              Row(
-                children: [
-                  Image.asset("assets/images/bike_icon.png",
-                      height: 20,
-                      errorBuilder: (context, error, stackTrace) =>
-                          const SizedBox(
-                            height: 18,
-                            width: 18,
-                          )),
-                  const SizedBox(width: 6),
-                  Text(
-                    "5 trips",
-                    style: text.bodySmall!.copyWith(
-                      color: Colors.black,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 
@@ -1099,9 +994,15 @@ Widget _rideDetails(TextTheme text, BookRideProvider bookRideProvider) {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          "Ride Details",
-          style: text.titleMedium!.copyWith(fontFamily: AppFonts.medium),
+        InkWell(
+          onTap: () {
+            bookRideProvider.initMapFeatures();
+            // bookRideProvider.emitPaymentSuccess();
+          },
+          child: Text(
+            "Ride Details",
+            style: text.titleMedium!.copyWith(fontFamily: AppFonts.medium),
+          ),
         ),
         const SizedBox(height: 12),
         Row(
@@ -1187,5 +1088,193 @@ Widget _rideDetails(TextTheme text, BookRideProvider bookRideProvider) {
         ),
       ],
     ),
+  );
+}
+
+void showAddMoreTipDialog({
+  required BuildContext context,
+}) {
+  if (!context.mounted) return;
+
+  showDialog(
+    context: context,
+    barrierDismissible: true,
+    builder: (_) {
+      return Center(
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.85,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(22),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.12),
+                  blurRadius: 18,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Stack(
+              children: [
+                // 🧾 Content
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(height: 10),
+                    const Text(
+                      "Want faster ride acceptance?",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      "Adding a small extra tip may help drivers accept your ride sooner.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.black54,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+
+                    // ✅ OK Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 44,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.maybePop(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryColor,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Text(
+                          "Okay",
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: AppColors.white,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+void showRideEndNotifyDialog(BuildContext context) {
+  showGeneralDialog(
+    context: context,
+    barrierDismissible: false,
+    barrierLabel: "RideEndNotify",
+    transitionDuration: const Duration(milliseconds: 350),
+    pageBuilder: (_, __, ___) {
+      // auto close after 2.5 seconds
+      Future.delayed(const Duration(milliseconds: 2500), () {
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+      });
+
+      return Center(
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 32),
+            padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(22),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                )
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                /// Success Icon Animation
+                TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  duration: const Duration(milliseconds: 600),
+                  curve: Curves.easeOutBack,
+                  builder: (context, value, child) {
+                    return Transform.scale(
+                      scale: value,
+                      child: Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.check,
+                          color: Colors.green,
+                          size: 46,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 20),
+
+                const Text(
+                  "Ride Completed",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+
+                const SizedBox(height: 6),
+
+                const Text(
+                  "You’ve reached your destination safely.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+
+    /// Entry animation
+    transitionBuilder: (_, animation, __, child) {
+      return FadeTransition(
+        opacity: animation,
+        child: ScaleTransition(
+          scale: CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutBack,
+          ),
+          child: child,
+        ),
+      );
+    },
   );
 }
