@@ -5,11 +5,16 @@ import 'package:flutter/foundation.dart';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:yuva_ride/provider/auth_provider.dart';
 import 'package:yuva_ride/provider/book_ride_provider.dart';
 import 'package:yuva_ride/services/local_storage.dart';
+import 'package:yuva_ride/services/status.dart';
+import 'package:yuva_ride/utils/app_assets.dart';
+import 'package:yuva_ride/utils/app_fonts.dart';
 import 'package:yuva_ride/utils/globle_func.dart';
 import 'package:yuva_ride/view/custom_widgets/cusotm_back.dart';
+import 'package:yuva_ride/view/custom_widgets/custom_image_carousel.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_inkwell.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_scaffold_utils.dart';
 import 'package:flutter/services.dart';
@@ -31,13 +36,33 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
   final MapService mapService = MapService();
   Set<Marker> markers = {};
+
+  late AnimationController sheetCtrl;
+  late Animation<double> slideAnim;
+  late Animation<double> bounceAnim;
 
   @override
   void initState() {
     super.initState();
+    sheetCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+
+    slideAnim = Tween<double>(begin: 1, end: 0).animate(
+      CurvedAnimation(parent: sheetCtrl, curve: Curves.easeOutCubic),
+    );
+
+    bounceAnim = Tween<double>(begin: 25, end: 0).animate(
+      CurvedAnimation(parent: sheetCtrl, curve: Curves.elasticOut),
+    );
+    Future.delayed(const Duration(milliseconds: 300), () {
+      sheetCtrl.forward();
+    });
     _loadMarkers();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       checkActiveRide();
@@ -50,25 +75,28 @@ class _HomeScreenState extends State<HomeScreen> {
       print('🔹 checkActiveRide: Starting...');
       final provider = context.read<BookRideProvider>();
       print('🔹 checkActiveRide: Provider initialized');
-      
+
       await provider.fetchUserActiveRide();
       print('🔹 checkActiveRide: fetchUserActiveRide completed');
-      print('🔹 checkActiveRide: activeRideState = ${provider.activeRideState}');
-      
+      print(
+          '🔹 checkActiveRide: activeRideState = ${provider.activeRideState}');
+
       final ride = provider.activeRideState.data?.data;
       print('🔹 checkActiveRide: ride = $ride');
 
       if (ride != null) {
-        print('🔹 checkActiveRide: Ride found - ID: ${ride.requestId}, Status: ${ride.status}');
-        
+        print(
+            '🔹 checkActiveRide: Ride found - ID: ${ride.requestId}, Status: ${ride.status}');
+
         provider.initSocket();
         print('🔹 checkActiveRide: Socket initialized');
-        
+
         await provider.rideDetail(requestId: ride.requestId!);
         print('🔹 checkActiveRide: rideDetail fetched');
-        
+
         if (ride.driverId != null) {
-          print('🔹 checkActiveRide: Fetching driver profile - driverId: ${ride.driverId}');
+          print(
+              '🔹 checkActiveRide: Fetching driver profile - driverId: ${ride.driverId}');
           provider.getDriverProfile(driverId: ride.driverId!);
         } else {
           print('🔹 checkActiveRide: No driver ID available');
@@ -87,7 +115,7 @@ class _HomeScreenState extends State<HomeScreen> {
         // else if( ride.status == '2' || ride.status == '3'){
         //    provider.arrivedPickup();
         // }
-        
+
         //  else if (ride.status == '5' || ride.status == '6' || ride.status == '7') {
         //   provider.pickuDropMapFeatures();
         // } else {
@@ -139,6 +167,9 @@ class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   @override
   Widget build(BuildContext context) {
+    context.read<BookRideProvider>().fetchCategory();
+    double mapHeight = screenHeight * .27;
+    double headerHight = screenHeight * .18;
     return CustomScaffold(
       scaffoldKey: _scaffoldKey,
       drawer: Drawer(
@@ -147,8 +178,8 @@ class _HomeScreenState extends State<HomeScreen> {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            backgroundColor: AppColors.primaryColor,
-            expandedHeight: 150,
+            backgroundColor: const Color.fromRGBO(249, 111, 0, 1),
+            expandedHeight: headerHight + 30,
             pinned: true,
             floating: false,
             elevation: 0,
@@ -171,7 +202,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   //       ),
                   // ),
                   child: Image.asset('assets/images/logo.png',
-                      height: 70, width: 70),
+                      height: headerHight * .5, width: headerHight * .5),
                 ),
                 const Spacer(),
                 Container(
@@ -189,11 +220,14 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             flexibleSpace: FlexibleSpaceBar(
-              background: Padding(
-                padding: const EdgeInsets.only(top: 90, left: 18, right: 18),
-                child: Column(
-                  children: [
-                    Row(
+              background: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  SizedBox(height: headerHight * .05),
+                  Padding(
+                    padding: EdgeInsets.only(
+                        top: headerHight * .4, left: 18, right: 18),
+                    child: Row(
                       children: [
                         _circleButton(Icons.menu, () {
                           _scaffoldKey.currentState?.openDrawer();
@@ -210,7 +244,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               );
                             },
                             child: Container(
-                              height: 50,
+                              height: headerHight * .30,
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               decoration: BoxDecoration(
                                 color: Colors.white,
@@ -241,8 +275,136 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                  SizedBox(height: headerHight * .0),
+                  InkWell(
+                    onTap: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (_) {
+                          return const _LiveRideSharingBottomSheet();
+                        },
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.only(top: 5, bottom: 5),
+                      decoration: const BoxDecoration(color: AppColors.black),
+                      height: headerHight * .25,
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            const SizedBox(
+                              width: 10,
+                            ),
+                            // LIVE INDICATOR (OUTSIDE)
+                            Container(
+                              height: 19,
+                              width: 19,
+                              decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.green.withOpacity(.3)),
+                              child: Center(
+                                child: Container(
+                                  height: 8,
+                                  width: 8,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.green,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+
+                            const Text(
+                              "Live",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+
+                            const SizedBox(width: 10),
+
+                            // HORIZONTAL CARDS
+                            ListView.separated(
+                              shrinkWrap: true,
+                              scrollDirection: Axis.horizontal,
+                              itemCount: 3,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(width: 8),
+                              itemBuilder: (context, index) {
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF232020),
+                                    borderRadius: BorderRadius.circular(24),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Text(
+                                        "2:30 AM",
+                                        style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 13,
+                                            fontFamily: AppFonts.medium),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      const Text(
+                                        "Hyderabad",
+                                        style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 13,
+                                            fontFamily: AppFonts.medium),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      const Icon(
+                                        Icons.arrow_forward,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      const Text(
+                                        "Vizag",
+                                        style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 13,
+                                            fontFamily: AppFonts.medium),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 0),
+                                        decoration: BoxDecoration(
+                                          borderRadius:
+                                              BorderRadius.circular(20),
+                                        ),
+                                        child: const Text(
+                                          "Bike",
+                                          style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 12,
+                                              fontFamily: AppFonts.medium),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                            const SizedBox(width: 10)
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
+                ],
               ),
             ),
           ),
@@ -252,10 +414,12 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Stack(
               children: [
                 SizedBox(
-                  height: 300,
+                  height: mapHeight,
                   child: GoogleMap(
                     onTap: (argument) {
-                      print(argument.toString());
+                      if (kDebugMode) {
+                        print(argument.toString());
+                      }
                     },
                     onMapCreated: (controller) {
                       mapService.initController(controller);
@@ -273,16 +437,29 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 Positioned(
-                  bottom: 130,
+                  top: mapHeight * .56,
                   right: 16,
-                  child: FloatingActionButton(
-                    backgroundColor: Colors.white,
-                    child: const Icon(Icons.my_location, color: Colors.black),
-                    onPressed: () {
+                  child: InkWell(
+                    onTap: () {
                       Future.delayed(const Duration(milliseconds: 500), () {
                         mapService.moreIconCamereraAnimation();
                       });
                     },
+                    child: Container(
+                      decoration: const BoxDecoration(
+                          color: AppColors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                                color: AppColors.grey,
+                                blurRadius: 1,
+                                spreadRadius: 1)
+                          ]),
+                      child: const Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Icon(Icons.my_location, color: Colors.black),
+                      ),
+                    ),
                   ),
                 ),
                 // Padding(
@@ -293,110 +470,305 @@ class _HomeScreenState extends State<HomeScreen> {
                 //     width: 25,
                 //   ),
                 // ),
+                // Padding(
+                //   padding: const EdgeInsets.only(top: 240, left: 10, right: 10),
+                //   child: Row(
+                //     children: [
+                //       _buildCategoryCard(
+                //         title: "Ride Booking",
+                //         subtitle: "Book your ride in seconds",
+                //         imagePath: "assets/images/ride_booking.png",
+                //         ontap: () {
+                //           Navigator.push(
+                //             context,
+                //             AppAnimations.slideTopToBottom(
+                //               const SelectLocationBookScreen(),
+                //             ),
+                //           );
+                //         },
+                //       ),
+                //       const SizedBox(width: 12),
+                //       _buildCategoryCard(
+                //         title: "Ride Sharing",
+                //         subtitle: "Connect and ride together",
+                //         imagePath: "assets/images/ride_sharing.png",
+                //         ontap: () {
+                //           Navigator.push(
+                //             context,
+                //             AppAnimations.slideTopToBottom(
+                //               const SelectLocationShareScreen(),
+                //             ),
+                //           );
+                //         },
+                //       ),
+                //     ],
+                //   ),
+                // ),
                 Padding(
-                  padding: const EdgeInsets.only(top: 240, left: 10, right: 10),
-                  child: Row(
-                    children: [
-                      _buildCategoryCard(
-                        title: "Ride Booking",
-                        subtitle: "Book your ride in seconds",
-                        imagePath: "assets/images/ride_booking.png",
-                        ontap: () {
-                          Navigator.push(
-                            context,
-                            AppAnimations.slideTopToBottom(
-                              const SelectLocationBookScreen(),
-                            ),
-                          );
-                        },
+                  padding:
+                      EdgeInsets.only(top: mapHeight - 40, left: 10, right: 10),
+                  child: Container(
+                    margin: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        width: 1,
+                        color: AppColors.white.withOpacity(.3),
                       ),
-                      const SizedBox(width: 12),
-                      _buildCategoryCard(
-                        title: "Ride Sharing",
-                        subtitle: "Connect and ride together",
-                        imagePath: "assets/images/ride_sharing.png",
-                        ontap: () {
-                          Navigator.push(
-                            context,
-                            AppAnimations.slideTopToBottom(
-                              const SelectLocationShareScreen(),
+                      boxShadow: [
+                        BoxShadow(
+                            color: AppColors.grey.withOpacity(.3),
+                            // offset: const Offset(1, 0),
+                            offset: const Offset(0, -2),
+                            blurRadius: 1,
+                            spreadRadius: 1)
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              AppAnimations.slideBottomToTop(
+                                const SelectLocationBookScreen(),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 10, horizontal: 16),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.orange),
+                              borderRadius: BorderRadius.circular(30),
                             ),
-                          );
-                        },
-                      ),
-                    ],
+                            child: Row(
+                              children: [
+                                const Icon(Icons.search, color: Colors.orange),
+                                const SizedBox(width: 10),
+                                Text(
+                                  "Where are you going ?",
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyLarge
+                                      ?.copyWith(color: Colors.orange),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        _locationTile("Madhapur",
+                            "9-120 , Madhapur metro station, Hyderabad, Telangana"),
+                        const SizedBox(height: 5),
+                        _locationTile("Madhapur",
+                            "9-120 , Madhapur metro station, Hyderabad, Telangana"),
+                        const SizedBox(height: 5),
+                        _locationTile("Madhapur",
+                            "9-120 , Madhapur metro station, Hyderabad, Telangana"),
+                        const SizedBox(height: 5),
+                      ],
+                    ),
                   ),
-                ),
+                )
               ],
             ),
           ),
-
-          // BODY CONTENT
           SliverToBoxAdapter(
-            child: Container(
-              margin: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  width: 1,
-                  color: AppColors.white.withOpacity(.3),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.grey.withOpacity(.3),
-                    offset: const Offset(1, 3),
-                    blurRadius: 1,
-                    spreadRadius: 3,
-                  )
-                ],
-              ),
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        AppAnimations.slideBottomToTop(
-                          const SelectLocationBookScreen(),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 10, horizontal: 16),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.orange),
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.search, color: Colors.orange),
-                          const SizedBox(width: 10),
-                          Text(
-                            "Search Destination",
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyLarge
-                                ?.copyWith(color: Colors.orange),
+            child: Consumer<BookRideProvider>(
+              builder: (context, bookingProvider, child) {
+                return Consumer<BookRideProvider>(
+                    builder: (context, homeProvider, _) {
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 0, bottom: 40),
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(left: 10, right: 10),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Explore services',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleLarge
+                                    ?.copyWith(fontFamily: AppFonts.semiBold),
+                              ),
+                              TextButton(
+                                  onPressed: () {
+                                    showModalBottomSheet(
+                                      context: context,
+                                      isScrollControlled: true,
+                                      backgroundColor: Colors.transparent,
+                                      builder: (context) {
+                                        return SizedBox(
+                                          height: MediaQuery.of(context)
+                                                  .size
+                                                  .height *
+                                              0.52,
+                                          width: double.infinity,
+                                          child: _categoryBottomSheet(context,
+                                              Theme.of(context).textTheme),
+                                        );
+                                      },
+                                    );
+                                  },
+                                  child: Text(
+                                    'View all',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleLarge
+                                        ?.copyWith(
+                                            fontFamily: AppFonts.semiBold),
+                                  ))
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                        isStatusLoadingOrError(
+                                homeProvider.categoryState.status)
+                            ? Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: List.generate(
+                                    3, (index) => categoryGridItemShimmer()),
+                              )
+                            : Padding(
+                                padding:
+                                    const EdgeInsets.only(left: 10, right: 10),
+                                child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: List.generate(
+                                        (homeProvider
+                                                        .categoryState
+                                                        .data
+                                                        ?.categoryList
+                                                        ?.length ??
+                                                    0) >=
+                                                3
+                                            ? 3
+                                            : homeProvider.categoryState.data
+                                                    ?.categoryList?.length ??
+                                                0, (index) {
+                                      final data = homeProvider.categoryState
+                                          .data?.categoryList?[index];
+                                      return _categoryGridItem(
+                                        text: Theme.of(context).textTheme,
+                                        title: data?.name ?? "",
+                                        icon: "assets/images/bike_book.png",
+                                        isSelected: false,
+                                        onTap: () async {
+                                          // homeProvider.setCategory(
+                                          //     data?.serviceCategory ?? '');
+                                          // homeProvider.getCalculatedPrice();
+                                        },
+                                      );
+                                    })),
+                              ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  _locationTile("Madhapur",
-                      "9-120 , Madhapur metro station, Hyderabad, Telangana"),
-                  _locationTile("Madhapur",
-                      "9-120 , Madhapur metro station, Hyderabad, Telangana"),
-                  _locationTile("Madhapur",
-                      "9-120 , Madhapur metro station, Hyderabad, Telangana"),
-                ],
-              ),
+                  );
+                });
+              },
             ),
           ),
+          SliverToBoxAdapter(
+              child: Padding(
+            padding: const EdgeInsets.only(left: 10, right: 10),
+            child: CustomImageCarousel(
+              height: screenHeight * .18,
+              images: const [
+                AppAssets.homeBanner,
+                AppAssets.homeBanner,
+                AppAssets.homeBanner,
+                AppAssets.homeBanner,
+              ],
+            ),
+          )),
+          SliverToBoxAdapter(
+              child: Padding(
+            padding:
+                const EdgeInsets.only(left: 11, right: 11, top: 20, bottom: 20),
+            child: CustomImageCarousel(
+              height: screenHeight * .18,
+              images: const [
+                AppAssets.homeBanner2,
+                AppAssets.homeBanner2,
+                AppAssets.homeBanner2,
+                AppAssets.homeBanner2
+              ],
+            ),
+          )),
+          // BODY CONTENT
+          // SliverToBoxAdapter(
+          //   child: Container(
+          //     margin: const EdgeInsets.all(18),
+          //     decoration: BoxDecoration(
+          //       color: Colors.white,
+          //       borderRadius: BorderRadius.circular(20),
+          //       border: Border.all(
+          //         width: 1,
+          //         color: AppColors.white.withOpacity(.3),
+          //       ),
+          //       boxShadow: [
+          //         BoxShadow(
+          //           color: AppColors.grey.withOpacity(.3),
+          //           offset: const Offset(1, 3),
+          //           blurRadius: 1,
+          //           spreadRadius: 3,
+          //         )
+          //       ],
+          //     ),
+          //     padding: const EdgeInsets.all(18),
+          //     child: Column(
+          //       crossAxisAlignment: CrossAxisAlignment.start,
+          //       children: [
+          //         InkWell(
+          //           onTap: () {
+          //             Navigator.push(
+          //               context,
+          //               AppAnimations.slideBottomToTop(
+          //                 const SelectLocationBookScreen(),
+          //               ),
+          //             );
+          //           },
+          //           child: Container(
+          //             padding: const EdgeInsets.symmetric(
+          //                 vertical: 10, horizontal: 16),
+          //             decoration: BoxDecoration(
+          //               border: Border.all(color: Colors.orange),
+          //               borderRadius: BorderRadius.circular(30),
+          //             ),
+          //             child: Row(
+          //               children: [
+          //                 const Icon(Icons.search, color: Colors.orange),
+          //                 const SizedBox(width: 10),
+          //                 Text(
+          //                   "Where are you going ?",
+          //                   style: Theme.of(context)
+          //                       .textTheme
+          //                       .bodyLarge
+          //                       ?.copyWith(color: Colors.orange),
+          //                 ),
+          //               ],
+          //             ),
+          //           ),
+          //         ),
+          //         const SizedBox(height: 20),
+          //         _locationTile("Madhapur",
+          //             "9-120 , Madhapur metro station, Hyderabad, Telangana"),
+          //         _locationTile("Madhapur",
+          //             "9-120 , Madhapur metro station, Hyderabad, Telangana"),
+          //         _locationTile("Madhapur",
+          //             "9-120 , Madhapur metro station, Hyderabad, Telangana"),
+          //       ],
+          //     ),
+          //   ),
+          // ),
         ],
       ),
     );
@@ -537,17 +909,346 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _locationTile(String title, String subtitle) {
-    return ListTile(
-      leading: const Icon(Icons.location_on_outlined),
-      title: Text(
-        title,
-        style: Theme.of(context).textTheme.titleSmall,
+    return Row(
+      children: [
+        const Icon(Icons.location_on_outlined),
+        const SizedBox(width: 10),
+        SizedBox(
+          width: screenWidth * .7,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style: Theme.of(context).textTheme.titleSmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis),
+              Text(subtitle,
+                  style: Theme.of(context).textTheme.bodySmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis)
+            ],
+          ),
+        )
+      ],
+    );
+  }
+}
+
+Widget _categoryBottomSheet(BuildContext context, TextTheme text) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(.22),
+          blurRadius: 18,
+          offset: const Offset(0, -4),
+        )
+      ],
+    ),
+    child: Column(
+      children: [
+        // 👇 Handle (UI clarity)
+        Container(
+          height: 5,
+          width: 50,
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade300,
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Explore services',
+                style: text.titleLarge?.copyWith(fontFamily: AppFonts.semiBold),
+              ),
+              IconButton(
+                  style: const ButtonStyle(
+                      backgroundColor:
+                          WidgetStatePropertyAll(Color(0xffF3F4F6))),
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  icon: const Center(child: Icon(Icons.close)))
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        Expanded(
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 350),
+            child: Consumer<BookRideProvider>(
+              builder: (context, homeProvider, _) {
+                return isStatusLoadingOrError(homeProvider.categoryState.status)
+                    ? GridView.builder(
+                        itemCount: 9,
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          mainAxisSpacing: 14,
+                          crossAxisSpacing: 14,
+                          childAspectRatio: 0.85,
+                        ),
+                        itemBuilder: (_, __) => categoryGridItemShimmer(),
+                      )
+                    : GridView.builder(
+                        itemCount: homeProvider
+                                .categoryState.data?.categoryList?.length ??
+                            0,
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          mainAxisSpacing: 14,
+                          crossAxisSpacing: 14,
+                          childAspectRatio: 1,
+                        ),
+                        itemBuilder: (context, index) {
+                          final data = homeProvider
+                              .categoryState.data?.categoryList?[index];
+                          return _categoryGridItem(
+                              text: text,
+                              title: data?.name ?? "",
+                              icon: "assets/images/bike_book.png",
+                              isSelected: false,
+                              onTap: () {
+                                // homeProvider
+                                //     .setCategory(data?.serviceCategory ?? '');
+                                // homeProvider.getCalculatedPrice();
+                              });
+                        },
+                      );
+              },
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+/// Category Item
+Widget _categoryGridItem({
+  required TextTheme text,
+  required String icon,
+  required String title,
+  required bool isSelected,
+  required VoidCallback onTap,
+}) {
+  return InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(16),
+    child: Container(
+      height: screenWidth * .3,
+      width: screenWidth * .3,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Color(0xffF3F4F6),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isSelected ? AppColors.primaryColor : Color(0xffF3F4F6),
+          width: 1,
+        ),
+        // boxShadow: [
+        //   BoxShadow(
+        //     color: Colors.black.withOpacity(.06),
+        //     blurRadius: 8,
+        //     offset: const Offset(0, 4),
+        //   ),
+        // ],
       ),
-      subtitle: Text(
-        subtitle,
-        style: Theme.of(context).textTheme.bodySmall,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Image.asset(icon, height: 42),
+          const SizedBox(height: 10),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: text.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+            maxLines: 1,
+          ),
+        ],
       ),
-      contentPadding: EdgeInsets.zero,
+    ),
+  );
+}
+
+Widget categoryGridItemShimmer() {
+  return Shimmer.fromColors(
+    baseColor: Colors.grey.shade300,
+    highlightColor: Colors.grey.shade100,
+    child: Container(
+      height: screenWidth * .3,
+      width: screenWidth * .3,
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        border: Border.all(),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          /// ICON PLACEHOLDER
+          Container(
+            height: 52,
+            width: 52,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          /// TITLE PLACEHOLDER
+          Container(
+            height: 12,
+            width: 60,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _LiveRideSharingBottomSheet extends StatelessWidget {
+  const _LiveRideSharingBottomSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    final h = MediaQuery.of(context).size.height;
+
+    return SizedBox(
+      height: h * 0.75,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Color(0xff14821F),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                          height: 16,
+                          width: 16,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white,
+                          ),
+                          child: const Icon(Icons.circle,
+                              size: 8, color: Color(0xff14821F))),
+                      const SizedBox(width: 6),
+                      const Text(
+                        "Live",
+                        style: TextStyle(
+                          color: AppColors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                    style: const ButtonStyle(
+                        backgroundColor:
+                            WidgetStatePropertyAll(Color(0xffF3F4F6))),
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    icon: const Center(child: Icon(Icons.close)))
+              ],
+            ),
+
+            const SizedBox(height: 14),
+
+            // Title
+            const Text(
+              "Today’s Available ride sharing Booking",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // List
+            Expanded(
+              child: ListView.separated(
+                itemCount: 8,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (context, index) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF6F6F6),
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                    child: const Row(
+                      children: [
+                        Text(
+                          "2:30 AM",
+                          style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w500,fontFamily: AppFonts.medium),
+                        ),
+                        SizedBox(width: 16),
+                        Text(
+                          "Hyderabad",
+                          style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w500,fontFamily: AppFonts.medium),
+                        ),
+                        SizedBox(width: 8),
+                        Icon(Icons.arrow_forward, size: 18),
+                        SizedBox(width: 8),
+                        Text(
+                          "Vizag",
+                          style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w500,fontFamily: AppFonts.medium),
+                        ),
+                        Spacer(),
+                        Text(
+                          "Bike",
+                          style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w500,fontFamily: AppFonts.medium),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -90,6 +90,7 @@ class BookRideProvider extends ChangeNotifier {
   ApiResponse<CategoryModel> categoryState = ApiResponse.nothing();
 
   Future<void> fetchCategory() async {
+    if(isStatusSuccess(categoryState.status)){return;}
     setCategory('');
     setVehicleNull();
     notifyListeners();
