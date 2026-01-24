@@ -128,7 +128,7 @@ class RideDetailScreen extends StatelessWidget {
                     children: List.generate(reviews.length, (i) {
                       final r = reviews[i];
                       return Padding(
-                        padding: EdgeInsetsGeometry.only(right: 5),
+                        padding: const EdgeInsetsGeometry.only(right: 5),
                         child: ReviewCard(
                           textTheme: text,
                           name: r["name"] as String,

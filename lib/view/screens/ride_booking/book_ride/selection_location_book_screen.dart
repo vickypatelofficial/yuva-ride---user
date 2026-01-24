@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:yuva_ride/provider/book_ride_provider.dart';
 import 'package:yuva_ride/services/map_services.dart';
+import 'package:yuva_ride/services/status.dart';
 import 'package:yuva_ride/view/custom_widgets/cusotm_back.dart';
 import 'package:yuva_ride/view/custom_widgets/cusotm_radio_container.dart';
 import 'package:yuva_ride/view/custom_widgets/custom_scaffold_utils.dart';
@@ -35,6 +37,10 @@ class _SelectLocationBookScreenState extends State<SelectLocationBookScreen>
   @override
   void initState() {
     super.initState();
+    Future.microtask(() {
+      // ignore: use_build_context_synchronously
+      context.read<BookRideProvider>().loadLocations();
+    });
 
     _hintController = AnimationController(
       vsync: this,
@@ -57,6 +63,7 @@ class _SelectLocationBookScreenState extends State<SelectLocationBookScreen>
     ).animate(_hintController);
     _loadCurrentLocation();
   }
+
   LatLng? currentLatLng;
   Future<void> _loadCurrentLocation() async {
     currentLatLng = await MapService.getCurrentLatLng();
@@ -419,9 +426,10 @@ class _SelectLocationBookScreenState extends State<SelectLocationBookScreen>
                                       context,
                                       AppAnimations.fade(
                                           SelectLocationMapScreen(
-                                            type: 'pickup',
+                                        type: 'pickup',
                                         latLng: bookRideController
-                                            .pickupLocation?.latLng ?? currentLatLng,
+                                                .pickupLocation?.latLng ??
+                                            currentLatLng,
                                         onSelectLocation: (LatLng latLng,
                                             String address,
                                             String title,
@@ -443,7 +451,8 @@ class _SelectLocationBookScreenState extends State<SelectLocationBookScreen>
                                         provider.pickupLocation?.address ??
                                             "Select your Pickup location",
                                         style: text.bodyLarge!.copyWith(
-                                            fontFamily: AppFonts.medium), overflow: TextOverflow.ellipsis,
+                                            fontFamily: AppFonts.medium),
+                                        overflow: TextOverflow.ellipsis,
                                         maxLines: 1,
                                       ),
                                     ),
@@ -488,9 +497,10 @@ class _SelectLocationBookScreenState extends State<SelectLocationBookScreen>
                                       context,
                                       AppAnimations.fade(
                                           SelectLocationMapScreen(
-                                            type: 'drop',
+                                        type: 'drop',
                                         latLng: bookRideController
-                                            .dropLocation?.latLng ?? currentLatLng,
+                                                .dropLocation?.latLng ??
+                                            currentLatLng,
                                         onSelectLocation: (LatLng latLng,
                                             String address,
                                             String title,
@@ -510,7 +520,8 @@ class _SelectLocationBookScreenState extends State<SelectLocationBookScreen>
                                         provider.dropLocation?.address ??
                                             "Select your Drop location",
                                         style: text.bodyLarge!.copyWith(
-                                            fontFamily: AppFonts.medium), overflow: TextOverflow.ellipsis,
+                                            fontFamily: AppFonts.medium),
+                                        overflow: TextOverflow.ellipsis,
                                         maxLines: 1,
                                       ),
                                     ),
@@ -536,39 +547,106 @@ class _SelectLocationBookScreenState extends State<SelectLocationBookScreen>
 
               const SizedBox(height: 10),
 
+              // Expanded(
+              //   child: ListView.builder(
+              //     padding: const EdgeInsets.symmetric(horizontal: 18),
+              //     itemCount: 4,
+              //     itemBuilder: (_, index) {
+              //       return Padding(
+              //         padding: const EdgeInsets.only(bottom: 18),
+              //         child: Row(
+              //           crossAxisAlignment: CrossAxisAlignment.start,
+              //           children: [
+              //             const Icon(Icons.location_on,
+              //                 color: AppColors.primaryColor, size: 22),
+              //             const SizedBox(width: 12),
+              //             Column(
+              //               crossAxisAlignment: CrossAxisAlignment.start,
+              //               children: [
+              //                 Text("Madhapur",
+              //                     style: text.bodyLarge!
+              //                         .copyWith(fontWeight: FontWeight.bold)),
+              //                 const SizedBox(height: 2),
+              //                 SizedBox(
+              //                   width: screenWidth * .8,
+              //                   child: Text(
+              //                     "9-120, Madhapur metro station, Hyderabad, Telangana",
+              //                     style: text.bodySmall,
+              //                     overflow: TextOverflow.ellipsis,
+              //                     maxLines: 2,
+              //                   ),
+              //                 ),
+              //               ],
+              //             )
+              //           ],
+              //         ),
+              //       );
+              //     },
+              //   ),
+              // ),
+
               Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
-                  itemCount: 4,
-                  itemBuilder: (_, index) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 18),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Icon(Icons.location_on,
-                              color: AppColors.primaryColor, size: 22),
-                          const SizedBox(width: 12),
-                          Column(
+                child: Consumer<BookRideProvider>(
+                  builder: (context, provider, _) {
+                    final state = provider.locationState;
+
+                    if (isStatusLoading(state.status)) {
+                      return const LocationShimmer();
+                    }
+
+                    if (isStatusError(state.status)) {
+                      return Center(
+                        child: Text(state.message ?? "Something went wrong"),
+                      );
+                    }
+
+                    final list = state.data ?? [];
+
+                    if (list.isEmpty) {
+                      return const Center(child: Text("No locations found"));
+                    }
+
+                    return ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 18),
+                      itemCount: list.length,
+                      itemBuilder: (_, index) {
+                        final item = list[index];
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 18),
+                          child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text("Madhapur",
-                                  style: text.bodyLarge!
-                                      .copyWith(fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 2),
-                              SizedBox(
-                                width: screenWidth * .8,
-                                child: Text(
-                                  "9-120, Madhapur metro station, Hyderabad, Telangana",
-                                  style: text.bodySmall,
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 2,
-                                ),
+                              const Icon(
+                                Icons.location_on,
+                                color: AppColors.primaryColor,
+                                size: 22,
                               ),
+                              const SizedBox(width: 12),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.title,
+                                    style: text.bodyLarge!
+                                        .copyWith(fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  SizedBox(
+                                    width: screenWidth * .8,
+                                    child: Text(
+                                      item.subtitle,
+                                      style: text.bodySmall,
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 2,
+                                    ),
+                                  ),
+                                ],
+                              )
                             ],
-                          )
-                        ],
-                      ),
+                          ),
+                        );
+                      },
                     );
                   },
                 ),
@@ -726,6 +804,48 @@ class _SelectLocationBookScreenState extends State<SelectLocationBookScreen>
           color: color,
           borderRadius: BorderRadius.circular(50),
           boxShadow: [BoxShadow(color: color, blurRadius: 7)]),
+    );
+  }
+}
+
+class LocationShimmer extends StatelessWidget {
+  const LocationShimmer({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 18),
+      itemCount: 4,
+      itemBuilder: (_, __) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 18),
+          child: Shimmer.fromColors(
+            baseColor: Colors.grey.shade300,
+            highlightColor: Colors.grey.shade100,
+            child: Row(
+              children: [
+                Container(
+                  height: 22,
+                  width: 22,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(height: 14, width: 120, color: Colors.white),
+                    const SizedBox(height: 8),
+                    Container(height: 12, width: 220, color: Colors.white),
+                  ],
+                )
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -6,7 +6,9 @@ import 'package:yuva_ride/models/home/cancel_ride_reason_model.dart';
 import 'package:yuva_ride/models/home/contact_model.dart';
 import 'package:yuva_ride/models/home/home_model.dart';
 import 'package:yuva_ride/models/home/payment_coupon_model.dart';
+import 'package:yuva_ride/models/location_item_model.dart';
 import 'package:yuva_ride/models/ride_detail_model.dart';
+import 'package:yuva_ride/models/ride_list_response.dart';
 import 'package:yuva_ride/services/api_services.dart';
 import 'package:yuva_ride/services/local_storage.dart';
 import 'package:yuva_ride/services/status.dart';
@@ -239,16 +241,11 @@ class RideRepository {
     }
   }
 
- /// 🔹 Remove Ride Request
-  Future<ApiResponse> removeRideRequest({
-    required String requestId 
-  }) async {
+  /// 🔹 Remove Ride Request
+  Future<ApiResponse> removeRideRequest({required String requestId}) async {
     return await _api.post(
       AppUrl.removeRideRequest,
-      {
-        "uid": await LocalStorage.getUserId()??'',
-        "request_id": requestId
-      },
+      {"uid": await LocalStorage.getUserId() ?? '', "request_id": requestId},
     );
   }
 
@@ -323,5 +320,65 @@ class RideRepository {
       AppUrl.completeOnlinePayment,
       body,
     );
+  }
+
+  Future<ApiResponse<RideListResponse>> getRideList({
+    required String status,
+  }) async {
+    final uid = await LocalStorage.getUserId();
+
+    final response = await _api.post(
+      AppUrl.allServiceRequest,
+      {
+        "uid": uid,
+        "status": status, // upcoming | completed | cancelled
+        "service_category": "all"
+      },
+    );
+
+    if (isStatusSuccess(response.status)) {
+      return ApiResponse.success(
+        RideListResponse.fromJson(response.data),
+      );
+    } else {
+      return ApiResponse.error(response.message);
+    }
+  }
+
+  Future<ApiResponse<List<LocationItem>>> fetchLocations() async {
+    try {
+      await Future.delayed(const Duration(seconds: 3)); // ⏳ simulate API
+
+      final list = [
+        LocationItem(
+          latitude: 17.4483,
+          longitude: 78.3915,
+          title: "Madhapur",
+          subtitle: "9-120, Madhapur metro station, Hyderabad, Telangana",
+        ),
+        LocationItem(
+          latitude: 17.4375,
+          longitude: 78.4482,
+          title: "Hitech City",
+          subtitle: "Hitech City Rd, Hyderabad, Telangana",
+        ),
+        LocationItem(
+          latitude: 17.4300,
+          longitude: 78.4019,
+          title: "Gachibowli",
+          subtitle: "Gachibowli IT Park, Hyderabad, Telangana",
+        ),
+        LocationItem(
+          latitude: 17.4065,
+          longitude: 78.4772,
+          title: "Ameerpet",
+          subtitle: "Ameerpet Metro Station, Hyderabad",
+        ),
+      ];
+
+      return ApiResponse.success(list);
+    } catch (e) {
+      return ApiResponse.error("Failed to load locations");
+    }
   }
 }

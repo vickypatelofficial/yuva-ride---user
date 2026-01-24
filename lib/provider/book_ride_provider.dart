@@ -12,7 +12,9 @@ import 'package:yuva_ride/models/home/cancel_ride_reason_model.dart';
 import 'package:yuva_ride/models/home/contact_model.dart';
 import 'package:yuva_ride/models/home/home_model.dart';
 import 'package:yuva_ride/models/home/payment_coupon_model.dart';
+import 'package:yuva_ride/models/location_item_model.dart';
 import 'package:yuva_ride/models/ride_detail_model.dart';
+import 'package:yuva_ride/models/ride_list_response.dart';
 import 'package:yuva_ride/repository/ride_repository.dart';
 import 'package:yuva_ride/services/local_storage.dart';
 import 'package:yuva_ride/services/map_services.dart';
@@ -90,7 +92,9 @@ class BookRideProvider extends ChangeNotifier {
   ApiResponse<CategoryModel> categoryState = ApiResponse.nothing();
 
   Future<void> fetchCategory() async {
-    if(isStatusSuccess(categoryState.status)){return;}
+    if (isStatusSuccess(categoryState.status)) {
+      return;
+    }
     setCategory('');
     setVehicleNull();
     notifyListeners();
@@ -419,6 +423,28 @@ class BookRideProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  ApiResponse<RideListResponse> rideListState = ApiResponse.loading();
+
+  Future<void> fetchRideList(String status) async {
+    rideListState = ApiResponse.loading();
+    notifyListeners();
+
+    final data = await _repo.getRideList(status: status);
+    rideListState = data;
+
+    notifyListeners();
+  }
+
+  ApiResponse<List<LocationItem>> locationState = ApiResponse.nothing();
+
+  Future<void> loadLocations() async {
+    locationState = ApiResponse.loading();
+    notifyListeners();
+    final response = await _repo.fetchLocations();
+    locationState = response;
+    notifyListeners();
+  }
+
   final RazorpayService _razorpayService = RazorpayService();
 
   ApiResponse paymentState = ApiResponse.nothing();
@@ -521,28 +547,28 @@ class BookRideProvider extends ChangeNotifier {
   final MapService mapService = MapService();
   Future<void> initMapFeatures({bool fitBoundOnly = false}) async {
     final driverLocation = LatLng(
-      rideDetailState.data?.driverToCustomer?.driverLocation?.latitude ??
-        17.438911,
-      rideDetailState.data?.driverToCustomer?.driverLocation?.longitude ??
-        78.3983894);
+        rideDetailState.data?.driverToCustomer?.driverLocation?.latitude ??
+            17.438911,
+        rideDetailState.data?.driverToCustomer?.driverLocation?.longitude ??
+            78.3983894);
     final pickupLocation = MapService.parseLatLngSafe(
-        rideDetailState.data?.requestData?.picLatLong) ??
-      const LatLng(17.438911, 78.3983894);
-    
+            rideDetailState.data?.requestData?.picLatLong) ??
+        const LatLng(17.438911, 78.3983894);
+
     if (kDebugMode) {
       debugPrint('🔹 initMapFeatures - Driver: $driverLocation');
       debugPrint('🔹 initMapFeatures - Pickup: $pickupLocation');
     }
-    
+
     if (!fitBoundOnly) {
       print('map icon loading');
       await mapService.loadMapIcons(
-        startLocationIcon: 'assets/images/bike.png',
-        endLocationIcon: 'assets/images/green_marker.png');
-        print('map  setPickupDropMarkers');
+          startLocationIcon: 'assets/images/bike.png',
+          endLocationIcon: 'assets/images/green_marker.png');
+      print('map  setPickupDropMarkers');
       mapService.setPickupDropMarkers(
-        pickup: driverLocation, drop: pickupLocation);
-        print('creating route');
+          pickup: driverLocation, drop: pickupLocation);
+      print('creating route');
       await mapService.createRoutePolyline([driverLocation, pickupLocation]);
     }
 
@@ -732,12 +758,23 @@ class BookRideProvider extends ChangeNotifier {
       print(data);
       orderId = data['order_id'].toString();
       if (data?['payment_method_id']?.toString() == '9') {
-        final context = navigatorKey.currentContext!;
-        Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(
-                builder: (context) => const RideCompletedScreen()),
-            (_) => false);
+        showModalBottomSheet(
+          context: navigatorKey.currentContext!,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (context) {
+            final text = Theme.of(context).textTheme;
+            return paymentSuccessBottomSheet(
+                context, text, context.read<BookRideProvider>());
+          },
+        );
+        Future.delayed(const Duration(seconds: 3), () {
+          Navigator.pop(navigatorKey.currentContext!);
+          Navigator.push(
+            navigatorKey.currentContext!,
+            MaterialPageRoute(builder: (_) => const RideCompletedScreen()),
+          );
+        });
       } else {
         showPaymentDialog(navigatorKey.currentContext!,
             price: data?['amount_to_pay']?.toString() ?? '', onYes: () {

@@ -15,6 +15,7 @@ class RideOfferCard extends StatelessWidget {
   final String driverImage;
   final double rating;
   final VoidCallback bookRide;
+  final String vehicleImage;
 
   const RideOfferCard({
     super.key,
@@ -27,7 +28,7 @@ class RideOfferCard extends StatelessWidget {
     required this.driverName,
     required this.driverImage,
     required this.rating,
-    required this.bookRide,
+    required this.bookRide, required this.vehicleImage,
   });
 
   @override
@@ -114,7 +115,18 @@ class RideOfferCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
-                Image.asset("assets/images/car_book.png", height: 30),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(40),
+                  child: Image.network(
+                    vehicleImage,
+                    height: 30,
+                    width: 30,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Image.asset('assets/images/car_book.png',height: 30,width: 30,);
+                    },
+                  ),
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -143,11 +155,15 @@ class RideOfferCard extends StatelessWidget {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(40),
-                  child: Image.asset(
+                  child: Image.network(
                     driverImage,
                     height: 50,
                     width: 50,
                     fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                          height: 50, width: 50, color: AppColors.border);
+                    },
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -172,7 +188,12 @@ class RideOfferCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: CustomInkWell(
                 onTap: bookRide,
-                child: CustomButton(text: "Book now", onPressed: bookRide,height: 45,textVerticalPadding: 10,)),
+                child: CustomButton(
+                  text: "Book now",
+                  onPressed: bookRide,
+                  height: 45,
+                  textVerticalPadding: 10,
+                )),
           ),
         ],
       ),

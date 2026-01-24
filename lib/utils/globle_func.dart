@@ -49,6 +49,21 @@ Future<void> openDialer(String phoneNumber) async {
   }
 }
 
+String formatDateTime(String? isoDate) {
+  if (isoDate == null || isoDate.isEmpty) return "--";
+
+  try {
+    final dateTime = DateTime.parse(isoDate).toLocal();
+
+    final time = DateFormat('h:mm a').format(dateTime); // 5:30 PM
+    final date = DateFormat('dd/MM/yyyy').format(dateTime); // 12/07/2025
+
+    return "$time $date";
+  } catch (e) {
+    return "--";
+  }
+}
+
 pop(context) {
   Navigator.pop(context);
 }

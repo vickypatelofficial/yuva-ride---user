@@ -280,7 +280,7 @@ class _RideCompletedScreenState extends State<RideCompletedScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    " ${bookRideProvider.rideDetailState.data?.requestData?.picAddress}",
+                    " ${bookRideProvider.rideDetailState.data?.requestData?.picAddress}",overflow: TextOverflow.ellipsis,maxLines: 2,
                     style: text.bodyLarge!.copyWith(fontSize: w * 0.04),
                   ),
                   SizedBox(height: h * 0.01),
@@ -292,8 +292,8 @@ class _RideCompletedScreenState extends State<RideCompletedScreen> {
                   SizedBox(height: h * 0.01),
                   Text(
                     " ${bookRideProvider.rideDetailState.data?.requestData?.dropAddress}",
-                    style: text.bodyLarge!.copyWith(fontSize: w * 0.04),
-                  ),
+                    style: text.bodyLarge!.copyWith(fontSize: w * 0.04),overflow: TextOverflow.ellipsis,maxLines: 2,
+                  )
                 ],
               ),
             ),

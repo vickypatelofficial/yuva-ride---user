@@ -31,6 +31,7 @@ class ActiveRideData {
   final String? status;
   final String? rideStatus;
   final String? serviceCategory;
+  final String? vehicleServiceCategory;
 
   final double price;
   final double finalPrice;
@@ -54,6 +55,7 @@ class ActiveRideData {
     this.status,
     this.rideStatus,
     this.serviceCategory,
+    this.vehicleServiceCategory,
     required this.price,
     required this.finalPrice,
     this.pickupLatLong,
@@ -75,6 +77,7 @@ class ActiveRideData {
       status: json['status']?.toString(),
       rideStatus: json['ride_status']?.toString(),
       serviceCategory: json['service_category'],
+      vehicleServiceCategory: json['vehicle_service_category']?.toString(),
       price: _toDouble(json['price']),
       finalPrice: _toDouble(json['final_price']),
       pickupLatLong: json['pic_lat_long'],

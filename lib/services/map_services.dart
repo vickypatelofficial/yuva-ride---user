@@ -627,41 +627,41 @@ class MapService {
   final uuid = const Uuid();
   String _sessionToken = '';
 
-  /// 🔍 Get place suggestions
-  Future<List<PlaceSuggestion>> getLocationSuggestions(String input) async {
-    if (input.isEmpty) return [];
+    /// 🔍 Get place suggestions
+    Future<List<PlaceSuggestion>> getLocationSuggestions(String input) async {
+      if (input.isEmpty) return [];
 
-    if (_sessionToken.isEmpty) {
-      _sessionToken = uuid.v4();
-    }
-
-    try {
-      const String baseURL =
-          'https://maps.googleapis.com/maps/api/place/autocomplete/json';
-
-      final String request =
-          '$baseURL?input=$input&key=${Constants.mapkey}&sessiontoken=$_sessionToken';
-
-      if (kDebugMode) {
-        debugPrint("Places API: $request");
+      if (_sessionToken.isEmpty) {
+        _sessionToken = uuid.v4();
       }
 
-      final response = await http.get(Uri.parse(request));
-      final data = json.decode(response.body);
-      print('===========suggestions=========');
-      print(data.toString());
+      try {
+        const String baseURL =
+            'https://maps.googleapis.com/maps/api/place/autocomplete/json';
 
-      if (response.statusCode == 200) {
-        final List predictions = data['predictions'];
-        return predictions.map((e) => PlaceSuggestion.fromJson(e)).toList();
-      } else {
-        return [];
+        final String request =
+            '$baseURL?input=$input&key=${Constants.mapkey}&sessiontoken=$_sessionToken';
+
+        if (kDebugMode) {
+          debugPrint("Places API: $request");
+        }
+
+        final response = await http.get(Uri.parse(request));
+        final data = json.decode(response.body);
+        print('===========suggestions=========');
+        print(data.toString());
+
+        if (response.statusCode == 200) {
+          final List predictions = data['predictions'];
+          return predictions.map((e) => PlaceSuggestion.fromJson(e)).toList();
+        } else {
+          return [];
+        }
+      } catch (e) {
+        debugPrint("Places Error: $e");
+        return []; //
       }
-    } catch (e) {
-      debugPrint("Places Error: $e");
-      return []; //
     }
-  }
 
   Future<LatLng?> getLatLngFromPlaceId(String placeId) async {
     try {
